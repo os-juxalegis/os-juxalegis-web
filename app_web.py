@@ -708,15 +708,7 @@ if not st.session_state.autenticado:
                 encoded = base64.b64encode(f.read()).decode()
             logo_html = f"<img src='data:image/png;base64,{encoded}' width='95'/>"
         
-        st.markdown(f"""
-            <div class='logo-login-container'>
-                {logo_html}
-                <div>
-                    <div class='logo-text-login'>JUXALEGIS</div>
-                    <div class='logo-sub-login'>— OPERATING SYSTEM —</div>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<div class='logo-login-container'>{logo_html}<div><div class='logo-text-login'>JUXALEGIS</div><div class='logo-sub-login'>— OPERATING SYSTEM —</div></div></div>", unsafe_allow_html=True)
         
         st.markdown("<p style='text-align: left; color: #8A99A8; font-size: 12px; margin: 12px 0 16px 2px;'>Acceso Restringido al Sistema Operativo</p>", unsafe_allow_html=True)
         
@@ -744,13 +736,7 @@ with st.sidebar:
             encoded_sb = base64.b64encode(f.read()).decode()
         logo_sidebar_html = f"<img src='data:image/png;base64,{encoded_sb}' width='75' style='filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));'/>"
 
-    st.markdown(f"""
-        <div class="sidebar-brand-container">
-            {logo_sidebar_html}
-            <div class="sidebar-logo-text">JUXALEGIS</div>
-            <div class="sidebar-logo-sub">— OPERATING SYSTEM —</div>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown(f"<div class='sidebar-brand-container'>{logo_sidebar_html}<div class='sidebar-logo-text'>JUXALEGIS</div><div class='sidebar-logo-sub'>— OPERATING SYSTEM —</div></div>", unsafe_allow_html=True)
     
     st.markdown("---")
 
@@ -1173,12 +1159,7 @@ if vista == "chat":
 
     # ----------------- RENDERIZADO DE HISTORIAL CON ENCABEZADO DINÁMICO -----------------
     if has_messages:
-        st.markdown(f"""
-            <div style='display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(220, 164, 138, 0.2); padding-bottom: 10px; margin-bottom: 20px;'>
-                <span class='chat-active-header-title'>{act_cuad}: {titulo_chat_activo.upper()}</span>
-                <span style='color: #8A99A8; font-size: 0.8rem; font-family: "Times New Roman", Times, serif;'>Modo: {perfil_seleccionado} | {alias_display}</span>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(220, 164, 138, 0.2); padding-bottom: 10px; margin-bottom: 20px;'><span class='chat-active-header-title'>{act_cuad}: {titulo_chat_activo.upper()}</span><span style='color: #8A99A8; font-size: 0.8rem; font-family: \"Times New Roman\", Times, serif;'>Modo: {perfil_seleccionado} | {alias_display}</span></div>", unsafe_allow_html=True)
 
         for msg in st.session_state["messages"]:
             with st.chat_message(msg["role"], avatar=None):
@@ -1193,7 +1174,6 @@ if vista == "chat":
     col_left_space, col_pill, col_right_space = st.columns([0.05, 0.9, 0.05])
 
     with col_pill:
-        # Controles de audio y dictado colocados justo arriba de la barra de entrada
         render_bottom_voice_dock(
             text_to_speak=st.session_state.audio_text_to_speak,
             enable_tts=leer_en_voz_alta,
