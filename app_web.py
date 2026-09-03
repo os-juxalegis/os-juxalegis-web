@@ -76,6 +76,57 @@ st.markdown(
         .stChatInputContainer {
             padding-bottom: 0.75rem;
         }
+    } 
+    /* 4. Cápsula Unificada del Input de Chat (Burbuja Integral) */
+    .chat-pill-wrapper {
+        display: flex;
+        align-items: flex-end;
+        background-color: #1a1a24;
+        border: 1px solid rgba(220, 164, 138, 0.4);
+        border-radius: 20px;
+        padding: 6px 10px;
+        gap: 6px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+        margin-bottom: 10px;
+    }
+
+    .chat-pill-wrapper:focus-within {
+        border-color: #DCA48A;
+        box-shadow: 0 0 10px rgba(220, 164, 138, 0.25);
+    }
+
+    /* Caja de texto multilínea sin bordes propios */
+    .chat-pill-wrapper textarea {
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        color: #f1f1f1 !important;
+        resize: none !important;
+        min-height: 42px !important;
+        max-height: 180px !important;
+        font-size: 0.95rem !important;
+        line-height: 1.4 !important;
+        padding: 8px 4px !important;
+    }
+
+    /* Botones y popovers integrados sin recuadro individual */
+    .chat-pill-wrapper button, 
+    .chat-pill-wrapper [data-testid="stPopover"] > button {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: #DCA48A !important;
+        padding: 4px 6px !important;
+        border-radius: 8px !important;
+        height: 38px !important;
+        min-width: 36px !important;
+    }
+
+    .chat-pill-wrapper button:hover, 
+    .chat-pill-wrapper [data-testid="stPopover"] > button:hover {
+        background-color: rgba(220, 164, 138, 0.12) !important;
+        color: #ffffff !important;
     }
     </style>
     """,
@@ -1137,42 +1188,56 @@ if vista == "chat":
         st.session_state.audio_text_to_speak = ""
 
         with st.container():
-            col_plus, col_text, col_model, col_send = st.columns([0.06, 0.68, 0.19, 0.07])
-            
-            with col_plus:
-                with st.popover("➕", use_container_width=True):
-                    st.markdown("<p class='popover-group-title'>Herramientas Generativas</p>", unsafe_allow_html=True)
-                    if st.button("🎨 Crear imagen", use_container_width=True):
-                        st.session_state["active_view"] = "imagenes"
-                        st.rerun()
-                    if st.button("🎬 Crear video", use_container_width=True):
-                        st.session_state["active_view"] = "videos"
-                        st.rerun()
+        st.markdown('<div class="chat-pill-wrapper">', unsafe_allow_html=True)
+        col_add, col_input, col_model_btn, col_more, col_send = st.columns([0.06, 0.64, 0.16, 0.07, 0.07])
+        
+        with col_add:
+            with st.popover("➕", use_container_width=True):
+                st.caption("Herramientas Generativas")
+                if st.button("🎨 Crear imagen", use_container_width=True):
+                    st.session_state["active_view"] = "imagenes"
+                    st.rerun()
+                if st.button("🎬 Crear video", use_container_width=True):
+                    st.session_state["active_view"] = "videos"
+                    st.rerun()
 
-            with col_text:
-                user_prompt = st.text_input(
-                    "Entrada",
-                    placeholder=f"Escribir consulta o instrucción a {alias_display}...",
-                    label_visibility="collapsed",
-                    key=f"pill_input_{len(st.session_state.messages)}"
-                )
+        with col_input:
+            user_prompt = st.text_area(
+                "Entrada",
+                placeholder=f"Escribir consulta o instrucción a {alias_display}...",
+                label_visibility="collapsed",
+                key=f"pill_input_{len(st.session_state.messages)}",
+                height=48
+            )
 
-            with col_model:
-                nombre_corto = st.session_state.selected_model.replace("Claude ", "").replace("3.5 ", "").replace("3 ", "")
-                with st.popover(f"⚡ {nombre_corto} ▾", use_container_width=True):
-                    st.markdown("<p style='font-size: 0.72rem; color: #8A99A8; text-transform: uppercase; font-weight: 700;'>Modelo Activo</p>", unsafe_allow_html=True)
-                    if st.button("Sonnet 3.5 (Óptimo)", use_container_width=True):
-                        st.session_state.selected_model = "Claude 3.5 Sonnet"
-                        st.rerun()
-                    if st.button("Haiku (Rápido)", use_container_width=True):
-                        st.session_state.selected_model = "Claude Haiku"
-                        st.rerun()
-                    if st.button("Opus (Complejo)", use_container_width=True):
-                        st.session_state.selected_model = "Claude Opus"
-                        st.rerun()
+        with col_model_btn:
+            nombre_corto = st.session_state.selected_model.replace("Claude ", "").replace("3.5 ", "").replace("3 ", "")
+            with st.popover(f"⚡ {nombre_corto}", use_container_width=True):
+                st.caption("Modelo Activo")
+                if st.button("Sonnet 3.5 (Óptimo)", use_container_width=True):
+                    st.session_state.selected_model = "Claude 3.5 Sonnet"
+                    st.rerun()
+                if st.button("Haiku (Rápido)", use_container_width=True):
+                    st.session_state.selected_model = "Claude Haiku"
+                    st.rerun()
+                if st.button("Opus (Complejo)", use_container_width=True):
+                    st.session_state.selected_model = "Claude Opus"
+                    st.rerun()
 
-            with col_send:
-                submit_clicked = st.button("➔", use_container_width=True)
+        with col_more:
+            with st.popover("⋮", use_container_width=True):
+                st.caption("Opciones del Cuaderno")
+                if st.button("🧹 Limpiar chat", use_container_width=True):
+                    st.session_state.messages = []
+                    st.rerun()
+                if st.button("📁 Ver hilos", use_container_width=True):
+                    st.session_state["active_view"] = "ver_cuaderno"
+                    st.rerun()
+
+        with col_send:
+            submit_clicked = st.button("➔", use_container_width=True)
+
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # Procesamiento del mensaje con autodetección de modelos
     if (submit_clicked or user_prompt) and user_prompt.strip():
