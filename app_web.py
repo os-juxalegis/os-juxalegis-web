@@ -861,8 +861,8 @@ _default_nombre_ia = _fila_pref[1] if _fila_pref and _fila_pref[1] else "CHRONN"
 _conn_pref.close()
 
 _idx_modo = _opciones_modos.index(_default_modo)
-perfil_seleccionado = st.selectbox("Modo Operativo:", options=_opciones_modos, index=_idx_modo)
-alias_ia = st.text_input("Identidad IA:", value=_default_nombre_ia)
+perfil_seleccionado = st.sidebar.selectbox("Modo Operativo:", options=_opciones_modos, index=_idx_modo)
+alias_ia = st.sidebar.text_input("Identidad IA:", value=_default_nombre_ia)
 
 # Guardar si hubo cambio
 if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != alias_ia:
@@ -879,10 +879,10 @@ if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != al
     _conn_save.commit()
     _conn_save.close()
     
-    voz_sintesis = st.selectbox("Síntesis de Voz:", options=["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"])
-    leer_en_voz_alta = st.toggle("🔊 Leer respuestas en voz alta", value=False)
+    voz_sintesis = st.sidebar.selectbox("Síntesis de Voz:", options=["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"])
+    leer_en_voz_alta = st.sidebar.toggle("🔊 Leer respuestas en voz alta", value=False)
 
-    st.markdown(f"""
+    st.sidebar.markdown(f"""
         <div class="user-footer">
             <div class="user-avatar">NM</div>
             <div>
@@ -892,7 +892,7 @@ if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != al
         </div>
     """, unsafe_allow_html=True)
 
-    if st.button("🚪 Cerrar Sesión", use_container_width=True):
+    if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
         st.session_state.autenticado = False
         st.session_state.usuario_email = ""
         st.session_state.messages = []
