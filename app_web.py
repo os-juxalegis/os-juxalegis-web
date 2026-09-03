@@ -876,8 +876,8 @@ if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != al
             nombre_ia = excluded.nombre_ia,
             ultima_modificacion = CURRENT_TIMESTAMP
     """, (st.session_state.usuario_email, perfil_seleccionado, alias_ia))
-         _conn_save.commit()
-         _conn_save.close()
+    _conn_save.commit()
+    _conn_save.close()
 
 opciones_voces = ["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"]
 voz_sintesis = st.sidebar.selectbox("Síntesis de Voz:", options=opciones_voces, index=0)
