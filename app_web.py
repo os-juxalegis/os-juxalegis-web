@@ -1131,7 +1131,6 @@ if vista == "chat":
                         stream = client.messages.create(
                             model=target_model,
                             max_tokens=max_tokens_call,
-                            temperature=0.3,
                             system=system_prompt,
                             messages=[{"role": "user", "content": prompt}],
                             stream=True
@@ -1150,7 +1149,6 @@ if vista == "chat":
                         stream = client.messages.create(
                             model="claude-3-haiku-20240307",
                             max_tokens=1000,
-                            temperature=0.3,
                             system=system_prompt,
                             messages=[{"role": "user", "content": prompt}],
                             stream=True
