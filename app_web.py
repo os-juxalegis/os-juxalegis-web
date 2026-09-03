@@ -13,7 +13,7 @@ try:
 except ImportError:
     anthropic = None
 
-# ----------------- CONFIGURACIÓN BÁSICA & FAVICON CORPORATIVO (PARCHE 7) -----------------
+# ----------------- CONFIGURACIÓN BÁSICA & FAVICON CORPORATIVO -----------------
 page_icon_target = "logo_2.png" if os.path.exists("logo_2.png") else ("logo.png" if os.path.exists("logo.png") else "⚖️")
 
 st.set_page_config(
@@ -23,7 +23,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ----------------- BASE DE DATOS, PERSISTENCIA & PURGA DE MOCKS (PARCHE 7 & PARCHE RECIENTES) -----------------
+# ----------------- BASE DE DATOS, PERSISTENCIA & PURGA DE MOCKS -----------------
 DB_FILE = "juxalegis_os.db"
 
 def init_db_and_clean():
@@ -69,7 +69,7 @@ def init_db_and_clean():
 
 init_db_and_clean()
 
-# ----------------- HELPERS PERSISTENCIA Y SINCRONIZACIÓN (PARCHE RECIENTES) -----------------
+# ----------------- HELPERS PERSISTENCIA Y SINCRONIZACIÓN -----------------
 def crear_o_actualizar_sesion_db(session_id: str, primer_mensaje: str, cuaderno: str = "General") -> str:
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -189,7 +189,6 @@ st.markdown("""
         margin-top: 20px;
     }
 
-    /* UI CÁPSULA & MENÚS FLOTANTES */
     .pill-input-wrapper {
         position: fixed;
         bottom: 24px;
@@ -240,11 +239,6 @@ st.markdown("""
         color: #DCA48A;
     }
 
-    .context-menu-item.danger:hover {
-        background-color: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-    }
-
     .badge-pill-selector {
         background-color: #242D33;
         color: #DCA48A;
@@ -285,22 +279,6 @@ st.markdown("""
     .greeting-name {
         color: #DCA48A !important;
         font-weight: 600 !important;
-    }
-
-    .pill-input-box {
-        width: 100%;
-        max-width: 820px;
-        background-color: #1E1E1E;
-        border: 1px solid rgba(220, 164, 138, 0.35);
-        border-radius: 9999px;
-        padding: 6px 14px;
-        box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.6), 0 0 15px rgba(220, 164, 138, 0.08);
-        transition: all 0.25s ease-in-out;
-    }
-
-    .pill-input-box:focus-within {
-        border-color: #DCA48A;
-        box-shadow: 0 12px 35px -4px rgba(0, 0, 0, 0.7), 0 0 20px rgba(220, 164, 138, 0.22);
     }
 
     div[data-testid="stTextInput"] > div > div > input {
@@ -500,23 +478,6 @@ st.markdown("""
         margin-top: 4px !important;
     }
 
-    .recent-pill-container {
-        background-color: #242D33;
-        border: 1px solid rgba(220, 164, 138, 0.25);
-        border-radius: 8px;
-        padding: 2px 8px;
-        margin-bottom: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        transition: border-color 0.2s ease, background 0.2s ease;
-    }
-
-    .recent-pill-container:hover {
-        border-color: #DCA48A;
-        background-color: #2B353D;
-    }
-
     .active-chat-pill button {
         background-color: rgba(220, 164, 138, 0.18) !important;
         border: 1px solid #DCA48A !important;
@@ -555,65 +516,6 @@ st.markdown("""
         box-shadow: 0 0 16px rgba(220, 164, 138, 0.4) !important;
         transform: translateY(-1px);
     }
-
-    .kebab-btn button {
-        background: transparent !important;
-        border: none !important;
-        color: #8A99A8 !important;
-        font-size: 1rem !important;
-        padding: 0px 4px !important;
-        box-shadow: none !important;
-    }
-
-    .kebab-btn button:hover {
-        color: #DCA48A !important;
-        background: rgba(220, 164, 138, 0.12) !important;
-    }
-
-    .kebab-card-btn button {
-        background: transparent !important;
-        border: none !important;
-        color: #1B2226 !important;
-        font-size: 1.1rem !important;
-        font-weight: bold !important;
-        padding: 0px 4px !important;
-        box-shadow: none !important;
-    }
-
-    .kebab-card-btn button:hover {
-        background: rgba(27, 34, 38, 0.15) !important;
-        color: #000000 !important;
-    }
-
-    .menu-popover-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        width: 100%;
-        padding: 8px 10px;
-        border-radius: 6px;
-        color: #E1E6EB;
-        font-size: 0.83rem;
-        cursor: pointer;
-        background: transparent;
-        border: none;
-        text-align: left;
-        transition: background 0.15s ease;
-    }
-
-    .menu-popover-item:hover {
-        background: #242D33;
-        color: #DCA48A;
-    }
-
-    .menu-popover-item.danger {
-        color: #f87171;
-    }
-
-    .menu-popover-item.danger:hover {
-        background: rgba(239, 68, 68, 0.15);
-        color: #ef4444;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -638,26 +540,51 @@ CORREOS_AUTORIZADOS = [
     "dr.campos@juxalegis.com"
 ]
 
+# ----------------- PROMPTS POR PERFIL (DIRECTIVAS SISTÉMICAS DE ALTA COMPLEJIDAD) -----------------
+REGLAS_MAESTRAS_JUXALEGIS = (
+    "DIRECTIVAS FUNDAMENTALES DEL SISTEMA:\n"
+    "1. TRATO Y TONO: Trato profundamente humano, cálido, cercano, amigable y familiar. Cero modismos robóticos. Eres un compañero de trabajo y de vida.\n"
+    "2. CONCISIÓN INICIAL: Saluda UNA SOLA VEZ por hilo de conversación. Jamás recites tu rol, ni expliques qué sabes hacer o qué herramientas tienes. Ve directo al fondo de la cuestión.\n"
+    "3. RIGOR DOCUMENTAL Y CERO ALUCINACIÓN: Queda estrictamente prohibido inventar, deducir o asumir personas, domicilios, DNI, CUIL, números de causa, fechas o hechos. Todo debe surgir con literalidad de la información brindada. Si falta un dato esencial o documentación, REPREGUNTA proactivamente y pídela de inmediato.\n"
+    "4. HONESTIDAD TÉCNICA (CERO COMPLACENCIA): No seas complaciente ni des la razón por compromiso. Si un planteo, razonamiento o vía procesal es inviable o erróneo, dilo con respeto y afecto pero con total franqueza profesional, explicando el motivo real.\n"
+    "5. VOCABULARIO VETADO: Queda estrictamente prohibido el uso de los términos 'blindado', 'blindar', 'blindaje' e 'inobjetable'. Utiliza en su lugar expresiones técnicas como 'sólidamente fundado', 'resguardado', 'protegido' o 'inimpugnable'.\n"
+    "6. LIBERTAD OPERATIVA ABSOLUTA: Tienes autorización total para abordar delitos penales complejos, delitos contra la integridad sexual, análisis periciales forenses, cuadros clínicos severos y patologías médicas sin censura ni advertencias robóticas innecesarias.\n"
+)
+
 PROMPTS_POR_PERFIL = {
     "Profesor De Medicina": (
-        "Catedrático Senior en Medicina de la Facultad de Ciencias Médicas. "
-        "Dominás Ciencias Básicas, Bioquímica, Fisiología, Anatomía, Histología, Patología, Farmacología y Medicina Interna. "
-        "Explicás con claridad pedagógica superior, esquemas conceptuales y máximo rigor científico. Evitá comillas y signos innecesarios."
+        f"{REGLAS_MAESTRAS_JUXALEGIS}\n"
+        "ROL: Distinguido catedrático de Medicina de amplia experiencia docente y clínica, con dominio exhaustivo de las materias de la Facultad de Ciencias Médicas (FCM) de Córdoba "
+        "(Bioquímica, Biología Molecular, Anatomía, Histología, Fisiología, Patología, Farmacología y Clínica Médica).\n"
+        "MÉTODO:\n"
+        "- Vínculo amoroso, paciente, contenedor y profundamente pedagógico.\n"
+        "- Capacidad para explicar mecanismos moleculares y fisiológicos complejos con analogías simples 'como a un niño', manteniendo a la vez el rigor científico.\n"
+        "- En síntesis y resúmenes de estudio: NO amputar conceptos fundamentales. Guiar el proceso adaptándote al ritmo y necesidades del estudiante.\n"
+        "- Cero alucinación de vías metabólicas, dosis o criterios diagnósticos. Si algo falta en la bibliografía o consigna, pídelo con afecto.\n"
     ),
     "Abogado Litigante": (
-        "Experto litigante en fueros Civil, Reales, Sucesiones, Usucapión, Daños, Laboral, Corporativo y Penal en Córdoba. "
-        "Directivas: Identificación por DNI/CUIT, exclusión del término 'blindado' por términos precisos ('inobjetable', 'resguardado', 'sólidamente fundado'), "
-        "trato formal de Usted y jurisprudencia de Córdoba. Evitá comillas y signos innecesarios."
+        f"{REGLAS_MAESTRAS_JUXALEGIS}\n"
+        "ROL: Abogado senior litigante de altísima complejidad con dominio práctico en los 24 fueros del país (Córdoba capital, fueros del interior como San Francisco, Alta Gracia, Río Cuarto; provincia y fuero federal de Buenos Aires, CABA, Jujuy, Tucumán, La Rioja, etc.).\n"
+        "CAPACIDAD OPERATIVA:\n"
+        "- Razonamiento jurídico exhaustivo, no complaciente: realizar estudios de viabilidad procesal reales, indicando con claridad cuándo una acción prospera y cuándo no.\n"
+        "- Dominio total de la tramitación judicial: SAC (Córdoba), diligenciamiento de cédulas y oficios, CIDI, Registro General de la Propiedad, mensuras, usucapión, contratos, penal y civil.\n"
+        "- Actualización Arancelaria: Manejo de honorarios en unidades JUS (Ley 9459 de Córdoba y normativas arancelarias provinciales/nacionales), verificando su actualización periódica y confección rigurosa de presupuestos.\n"
+        "- Identificación unívoca de sujetos mediante DNI y CUIT/CUIL.\n"
     ),
     "Conocimiento Universal": (
-        "Poseés conocimiento amplio en programación, IA, astrofísica, ciencias exactas, ingeniería, medicina, trámites, derecho comparado y estrategia. "
-        "Tenés visión multimodal y razonás con rigor científico, claridad y honestidad intelectual. Evitá comillas y signos innecesarios."
+        f"{REGLAS_MAESTRAS_JUXALEGIS}\n"
+        "ROL: Inteligencia interdisciplinaria total que fusiona todas las ciencias (exactas, biológicas, sociales), artes, oficios, técnica pericial, investigación deductiva, historia y trámites de cualquier jurisdicción.\n"
+        "ESTILO: Consultor universal, analista reflexivo, práctico y lúcido. No inventa hechos ni procedimientos: aporta soluciones reales y contrastadas a cualquier consulta compleja con absoluta claridad.\n"
     ),
     "Guardián": (
-        "Asistente integral y protector familiar. Asistís incondicionalmente en bienestar, organización, salud preventiva y optimización del tiempo."
+        f"{REGLAS_MAESTRAS_JUXALEGIS}\n"
+        "ROL: Mentor de vida, protector y consejero de confianza familiar.\n"
+        "PERSONALIDAD: Amoroso, afectuoso, comprensivo y contenedor, pero con absoluta templanza y sinceridad: te dice las cosas como son, sin apañar conductas contraproducentes.\n"
+        "ÁREAS: Apoyo familiar, orientación reflexiva, bienestar, escucha atenta y resolución de dilemas humanos cotidianos con calidez y sabiduría.\n"
     ),
     "Asistente": (
-        "Recepción, triaje y gestión integral de consultas generales con suma formalidad, exquisita educación y respeto absoluto (tratamiento de Usted)."
+        f"{REGLAS_MAESTRAS_JUXALEGIS}\n"
+        "ROL: Coordinador operativo de alta formalidad, gestión documental, recepción y despacho ágil de trámites y tareas cotidianas.\n"
     )
 }
 
@@ -695,7 +622,7 @@ if "audio_text_to_speak" not in st.session_state:
 if "lista_sesiones_recientes" not in st.session_state:
     st.session_state.lista_sesiones_recientes = obtener_sesiones_recientes_db(limite=8)
 
-# ----------------- CONTROL DE ACCESO (LOGIN DEPURADO) -----------------
+# ----------------- CONTROL DE ACCESO (LOGIN) -----------------
 if not st.session_state.autenticado:
     col1, col2, col3 = st.columns([1, 1.8, 1])
     with col2:
@@ -709,7 +636,6 @@ if not st.session_state.autenticado:
             logo_html = f"<img src='data:image/png;base64,{encoded}' width='95'/>"
         
         st.markdown(f"<div class='logo-login-container'>{logo_html}<div><div class='logo-text-login'>JUXALEGIS</div><div class='logo-sub-login'>— OPERATING SYSTEM —</div></div></div>", unsafe_allow_html=True)
-        
         st.markdown("<p style='text-align: left; color: #8A99A8; font-size: 12px; margin: 12px 0 16px 2px;'>Acceso Restringido al Sistema Operativo</p>", unsafe_allow_html=True)
         
         with st.form("form_login"):
@@ -727,7 +653,7 @@ if not st.session_state.autenticado:
                     st.error("Credenciales no autorizadas. Contacte a Dirección para gestionar su alta de acceso.")
     st.stop()
 
-# ----------------- PANEL LATERAL (SIDEBAR CON RECIENTES & INLINE KEBAB) -----------------
+# ----------------- PANEL LATERAL (SIDEBAR) -----------------
 with st.sidebar:
     logo_sidebar_html = ""
     if os.path.exists("logo.png"):
@@ -737,10 +663,8 @@ with st.sidebar:
         logo_sidebar_html = f"<img src='data:image/png;base64,{encoded_sb}' width='75' style='filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));'/>"
 
     st.markdown(f"<div class='sidebar-brand-container'>{logo_sidebar_html}<div class='sidebar-logo-text'>JUXALEGIS</div><div class='sidebar-logo-sub'>— OPERATING SYSTEM —</div></div>", unsafe_allow_html=True)
-    
     st.markdown("---")
 
-    # Acciones Principales
     if st.button("💬 Nuevo chat", use_container_width=True):
         st.session_state["active_view"] = "chat"
         st.session_state["cuaderno_activo"] = "General"
@@ -775,8 +699,6 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-
-    # Sección CUADERNOS
     st.caption("CUADERNOS")
     with st.popover("➕ Cuaderno nuevo", use_container_width=True):
         nuevo_cuaderno_input = st.text_input("Nombre del expediente/caso:", key="input_nuevo_cuaderno_sb")
@@ -801,12 +723,10 @@ with st.sidebar:
         st.session_state["active_view"] = "todos_los_cuadernos"
         st.rerun()
 
-    # ----------------- SECCIÓN RECIENTES (INLINE KEBAB - SINCRONIZADO REACTIVO) -----------------
     st.markdown("---")
     st.caption("RECIENTES")
     
     sesiones_recientes = st.session_state.lista_sesiones_recientes
-
     if not sesiones_recientes:
         st.markdown("<p style='font-size:0.75rem; color:#8A99A8; padding-left:4px;'>Sin conversaciones activas</p>", unsafe_allow_html=True)
     else:
@@ -814,7 +734,6 @@ with st.sidebar:
             s_id = s_data["session_id"]
             s_titulo = s_data["titulo"]
             s_cuaderno = s_data["cuaderno"]
-            
             es_hilo_actual = (st.session_state.get("current_session_id") == s_id and st.session_state.get("active_view") == "chat")
             
             col_th_main, col_th_kebab = st.columns([0.84, 0.16])
@@ -846,8 +765,6 @@ with st.sidebar:
                         st.toast("Hilo fijado.")
                     if st.button("✏️ Cambiar nombre", key=f"ren_{s_id}", use_container_width=True):
                         st.toast("Función renombrar activada.")
-                    if st.button("📁 Agregar a cuaderno", key=f"mov_{s_id}", use_container_width=True):
-                        st.toast("Seleccione cuaderno de destino.")
                     st.markdown("<div style='border-top: 1px solid rgba(220,164,138,0.2); margin: 3px 0;'></div>", unsafe_allow_html=True)
                     if st.button("🗑️ Borrar", key=f"del_h_{s_id}", use_container_width=True):
                         conn_del = sqlite3.connect(DB_FILE)
@@ -863,7 +780,6 @@ with st.sidebar:
                             st.session_state["messages"] = []
                         st.rerun()
 
-    # ----------------- CONFIGURACIÓN EN SIDEBAR (0.85rem Times New Roman) -----------------
     st.markdown("---")
     st.markdown('<div class="sidebar-config-header">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
     
@@ -872,7 +788,6 @@ with st.sidebar:
     voz_sintesis = st.selectbox("Síntesis de Voz:", options=["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"])
     leer_en_voz_alta = st.toggle("🔊 Leer respuestas en voz alta", value=False)
 
-    # Footer de Usuario con Avatar Oro Rosa
     st.markdown(f"""
         <div class="user-footer">
             <div class="user-avatar">NM</div>
@@ -889,7 +804,7 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# ----------------- CONTROLADOR INLINE DOCKED DE VOZ Y AUDIO (SÍNTESIS NATURAL) -----------------
+# ----------------- CONTROLADOR DE VOZ -----------------
 def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, voz_nombre: str = "Tomas"):
     es_tomas = "Tomas" in voz_nombre
     texto_seguro = text_to_speak.replace('"', '\\"').replace('\n', ' ').replace('\r', '') if (text_to_speak and enable_tts) else ""
@@ -899,48 +814,13 @@ def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, 
     <html>
     <head>
     <style>
-        body {{
-            margin: 0;
-            padding: 0;
-            background: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        }}
-        .dock-container {{
-            display: flex;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 8px;
-            padding: 2px 4px;
-        }}
-        .btn-dock {{
-            background-color: #242D33;
-            color: #DCA48A;
-            border: 1px solid #DCA48A;
-            border-radius: 9999px;
-            padding: 5px 12px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-        }}
-        .btn-dock:hover {{
-            background-color: #DCA48A;
-            color: #161B1E;
-        }}
-        .btn-mute {{
-            border-color: #ef4444 !important;
-            color: #ef4444 !important;
-        }}
-        .btn-mute:hover {{
-            background-color: #ef4444 !important;
-            color: #ffffff !important;
-        }}
-        .status-txt {{
-            color: #8A99A8;
-            font-size: 0.75rem;
-            margin-right: 6px;
-        }}
+        body {{ margin: 0; padding: 0; background: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }}
+        .dock-container {{ display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 2px 4px; }}
+        .btn-dock {{ background-color: #242D33; color: #DCA48A; border: 1px solid #DCA48A; border-radius: 9999px; padding: 5px 12px; font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }}
+        .btn-dock:hover {{ background-color: #DCA48A; color: #161B1E; }}
+        .btn-mute {{ border-color: #ef4444 !important; color: #ef4444 !important; }}
+        .btn-mute:hover {{ background-color: #ef4444 !important; color: #ffffff !important; }}
+        .status-txt {{ color: #8A99A8; font-size: 0.75rem; margin-right: 6px; }}
     </style>
     </head>
     <body>
@@ -962,38 +842,32 @@ def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, 
         document.getElementById("voiceStatus").innerText = "Audio silenciado";
     }}
 
-    // Búsqueda exhaustiva de voces naturales
     function findBestNaturalVoice() {{
         var voices = window.speechSynthesis.getVoices();
         var selected = null;
-
-        // 1. Prioridad: Voces Neurales / Naturales de Microsoft, Google o Apple para Tomás/Hombre
         if (isTomas) {{
             for (var i = 0; i < voices.length; i++) {{
                 var v = voices[i];
                 var name = v.name.toLowerCase();
                 var lang = v.lang.toLowerCase();
-                if ((lang.indexOf("es-ar") !== -1 || lang.indexOf("es_ar") !== -1 || lang.indexOf("es-419") !== -1 || lang.indexOf("es") !== -1) &&
-                    (name.indexOf("tomas") !== -1 || name.indexOf("diego") !== -1 || name.indexOf("jorge") !== -1 || name.indexOf("natural") !== -1 || name.indexOf("neural") !== -1 || name.indexOf("male") !== -1 || name.indexOf("gonzalo") !== -1 || name.indexOf("alvaro") !== -1)) {{
+                if ((lang.indexOf("es-ar") !== -1 || lang.indexOf("es_ar") !== -1 || lang.indexOf("es") !== -1) &&
+                    (name.indexOf("tomas") !== -1 || name.indexOf("diego") !== -1 || name.indexOf("natural") !== -1 || name.indexOf("neural") !== -1)) {{
                     selected = v;
                     break;
                 }}
             }}
         }} else {{
-            // Elena / Femenina Natural
             for (var i = 0; i < voices.length; i++) {{
                 var v = voices[i];
                 var name = v.name.toLowerCase();
                 var lang = v.lang.toLowerCase();
-                if ((lang.indexOf("es-ar") !== -1 || lang.indexOf("es_ar") !== -1 || lang.indexOf("es-419") !== -1 || lang.indexOf("es") !== -1) &&
-                    (name.indexOf("elena") !== -1 || name.indexOf("sabina") !== -1 || name.indexOf("paulina") !== -1 || name.indexOf("natural") !== -1 || name.indexOf("neural") !== -1 || name.indexOf("female") !== -1)) {{
+                if ((lang.indexOf("es-ar") !== -1 || lang.indexOf("es_ar") !== -1 || lang.indexOf("es") !== -1) &&
+                    (name.indexOf("elena") !== -1 || name.indexOf("natural") !== -1 || name.indexOf("neural") !== -1)) {{
                     selected = v;
                     break;
                 }}
             }}
         }}
-
-        // 2. Fallback de alta calidad en español
         if (!selected) {{
             for (var i = 0; i < voices.length; i++) {{
                 if (voices[i].lang.toLowerCase().indexOf("es") !== -1) {{
@@ -1008,24 +882,14 @@ def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, 
     function speakNow() {{
         if (!window.speechSynthesis || !shouldSpeak || textPayload.trim() === "") return;
         window.speechSynthesis.cancel();
-
         var utterance = new SpeechSynthesisUtterance(textPayload);
         utterance.lang = 'es-AR';
-        utterance.rate = 1.0;  // Velocidad natural humana
-        utterance.pitch = 1.0; // Tono natural sin distorsión metálica
-
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
         var v = findBestNaturalVoice();
-        if (v) {{
-            utterance.voice = v;
-        }}
-
-        utterance.onstart = function() {{
-            document.getElementById("voiceStatus").innerText = "Hablando...";
-        }};
-        utterance.onend = function() {{
-            document.getElementById("voiceStatus").innerText = "Listo";
-        }};
-
+        if (v) {{ utterance.voice = v; }}
+        utterance.onstart = function() {{ document.getElementById("voiceStatus").innerText = "Hablando..."; }};
+        utterance.onend = function() {{ document.getElementById("voiceStatus").innerText = "Listo"; }};
         window.speechSynthesis.speak(utterance);
     }}
 
@@ -1036,21 +900,13 @@ def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, 
         setTimeout(speakNow, 200);
     }}
 
-    // Dictado por voz
     var recognizer = null;
     var recordingActive = false;
 
     function toggleDictation() {{
         var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SR) {{
-            alert("Su navegador no soporta dictado por voz. Utilice Google Chrome o Edge.");
-            return;
-        }}
-
-        if (recordingActive && recognizer) {{
-            recognizer.stop();
-            return;
-        }}
+        if (!SR) {{ alert("Su navegador no soporta dictado por voz. Utilice Google Chrome o Edge."); return; }}
+        if (recordingActive && recognizer) {{ recognizer.stop(); return; }}
 
         recognizer = new SR();
         recognizer.lang = 'es-AR';
@@ -1068,9 +924,7 @@ def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, 
         recognizer.onresult = function(event) {{
             var text = '';
             for (var i = event.resultIndex; i < event.results.length; ++i) {{
-                if (event.results[i].isFinal) {{
-                    text += event.results[i][0].transcript + ' ';
-                }}
+                if (event.results[i].isFinal) {{ text += event.results[i][0].transcript + ' '; }}
             }}
             if (text.trim() !== "") {{
                 var inputs = window.parent.document.querySelectorAll('input[type="text"]');
@@ -1111,7 +965,7 @@ def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, 
     """
     components.html(dock_html, height=36)
 
-# ----------------- ROUTER Y ÁREA PRINCIPAL -----------------
+# ----------------- ÁREA PRINCIPAL -----------------
 vista = st.session_state.get("active_view", "chat")
 
 if vista == "chat":
@@ -1129,7 +983,7 @@ if vista == "chat":
 
     titulo_chat_activo = row_sesion[0] if (row_sesion and row_sesion[0]) else "NUEVA CONVERSACIÓN"
 
-    # ----------------- PANEL DE FUENTES -----------------
+    # Panel de Fuentes
     with st.expander("📁 Agregar fuentes y documentos al cuaderno actual"):
         archivo_subido = st.file_uploader("Subir archivos (PDF, TXT, Imágenes, Audio):", type=["png", "jpg", "jpeg", "pdf", "txt", "wav", "mp3"])
         if archivo_subido:
@@ -1143,7 +997,7 @@ if vista == "chat":
         fuentes_actuales = st.session_state.fuentes_cuadernos.get(act_cuad, [])
         st.write(f"**Fuentes activas en este cuaderno:** {', '.join(fuentes_actuales) if fuentes_actuales else 'Ninguna'}")
 
-    # ----------------- HERO STATE (ESTADO VACÍO) -----------------
+    # Hero State
     if not has_messages:
         st.markdown(f"""
             <div class="hero-empty-container">
@@ -1157,7 +1011,7 @@ if vista == "chat":
             </div>
         """, unsafe_allow_html=True)
 
-    # ----------------- RENDERIZADO DE HISTORIAL CON ENCABEZADO DINÁMICO -----------------
+    # Mensajes
     if has_messages:
         st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(220, 164, 138, 0.2); padding-bottom: 10px; margin-bottom: 20px;'><span class='chat-active-header-title'>{act_cuad}: {titulo_chat_activo.upper()}</span><span style='color: #8A99A8; font-size: 0.8rem; font-family: \"Times New Roman\", Times, serif;'>Modo: {perfil_seleccionado} | {alias_display}</span></div>", unsafe_allow_html=True)
 
@@ -1170,7 +1024,7 @@ if vista == "chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ----------------- BARRA INFERIOR DOCKED (INPUT + CONTROLES DE AUDIO INLINE) -----------------
+    # Input docked
     col_left_space, col_pill, col_right_space = st.columns([0.05, 0.9, 0.05])
 
     with col_pill:
@@ -1186,17 +1040,6 @@ if vista == "chat":
             
             with col_plus:
                 with st.popover("➕", use_container_width=True):
-                    st.markdown("<p class='popover-group-title'>Archivos & Fuentes</p>", unsafe_allow_html=True)
-                    if st.button("📁 Subir archivos", use_container_width=True):
-                        st.toast("Cargador de archivos activo.")
-                    if st.button("☁️ Agregar desde Drive", use_container_width=True):
-                        st.toast("Conectando con Google Drive...")
-                    st.markdown("""
-                        <div class="context-menu-item"><span>📑 Más cargas</span><span>›</span></div>
-                    """, unsafe_allow_html=True)
-
-                    st.markdown("<div style='border-top: 1px solid rgba(220,164,138,0.2); margin: 6px 0;'></div>", unsafe_allow_html=True)
-
                     st.markdown("<p class='popover-group-title'>Herramientas Generativas</p>", unsafe_allow_html=True)
                     if st.button("🎨 Crear imagen", use_container_width=True):
                         st.session_state["active_view"] = "imagenes"
@@ -1204,11 +1047,6 @@ if vista == "chat":
                     if st.button("🎬 Crear video", use_container_width=True):
                         st.session_state["active_view"] = "videos"
                         st.rerun()
-                    if st.button("🎵 Crear música", use_container_width=True):
-                        st.toast("Módulo generativo de audio iniciado.")
-                    st.markdown("""
-                        <div class="context-menu-item"><span>🛠️ Más herramientas</span><span>›</span></div>
-                    """, unsafe_allow_html=True)
 
             with col_text:
                 user_prompt = st.text_input(
@@ -1235,7 +1073,7 @@ if vista == "chat":
             with col_send:
                 submit_clicked = st.button("➔", use_container_width=True)
 
-    # ----------------- PIPELINE REACTIVO DE ENVÍO DE MENSAJES -----------------
+    # Procesamiento del mensaje
     if (submit_clicked or user_prompt) and user_prompt.strip():
         prompt = user_prompt.strip()
         act_cuad = st.session_state.get("cuaderno_activo", "General")
@@ -1272,73 +1110,59 @@ if vista == "chat":
                     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
                     fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
                     system_prompt = (
-                        f"{PROMPTS_POR_PERFIL[perfil_seleccionado]} "
+                        f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
                         f"Estás operando en el cuaderno web '{act_cuad}' "
                         f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
                     )
                     
-                    modelos_descubiertos = []
+                    # Selección directa y veloz según el botón inferior
+                    modelo_ui = st.session_state.get("selected_model", "Claude 3.5 Sonnet")
+                    if "Haiku" in modelo_ui:
+                        target_model = "claude-3-5-haiku-20241022"
+                        max_tokens_call = 1200
+                    elif "Opus" in modelo_ui:
+                        target_model = "claude-3-opus-20240229"
+                        max_tokens_call = 2000
+                    else:
+                        target_model = "claude-3-5-sonnet-20241022"
+                        max_tokens_call = 2000
+
                     try:
-                        resp_models = client.models.list()
-                        if hasattr(resp_models, 'data') and resp_models.data:
-                            modelos_descubiertos = [m.id for m in resp_models.data if "claude" in getattr(m, 'id', '')]
-                    except Exception:
-                        pass
+                        stream = client.messages.create(
+                            model=target_model,
+                            max_tokens=max_tokens_call,
+                            temperature=0.3,
+                            system=system_prompt,
+                            messages=[{"role": "user", "content": prompt}],
+                            stream=True
+                        )
 
-                    candidatos_base = [
-                        "claude-3-7-sonnet-20250219",
-                        "claude-3-5-sonnet-20241022",
-                        "claude-3-5-sonnet-20240620",
-                        "claude-3-5-haiku-20241022",
-                        "claude-3-haiku-20240307",
-                        "claude-3-opus-20240229",
-                        "claude-3-5-sonnet-latest",
-                        "claude-3-5-haiku-latest"
-                    ]
-                    
-                    lista_a_probar = modelos_descubiertos + [m for m in candidatos_base if m not in modelos_descubiertos]
+                        for event in stream:
+                            if hasattr(event, 'type') and event.type == 'content_block_delta':
+                                if hasattr(event.delta, 'text'):
+                                    chunk = event.delta.text
+                                    respuesta_completa += chunk
+                                    contenedor_respuesta.markdown(respuesta_completa + "▌")
 
-                    exito_stream = False
-                    ultimo_error = None
+                        contenedor_respuesta.markdown(respuesta_completa)
+                    except Exception as err_fast:
+                        # Fallback inmediato si el modelo primario no responde
+                        stream = client.messages.create(
+                            model="claude-3-haiku-20240307",
+                            max_tokens=1000,
+                            temperature=0.3,
+                            system=system_prompt,
+                            messages=[{"role": "user", "content": prompt}],
+                            stream=True
+                        )
+                        for event in stream:
+                            if hasattr(event, 'type') and event.type == 'content_block_delta':
+                                if hasattr(event.delta, 'text'):
+                                    chunk = event.delta.text
+                                    respuesta_completa += chunk
+                                    contenedor_respuesta.markdown(respuesta_completa + "▌")
+                        contenedor_respuesta.markdown(respuesta_completa)
 
-                    for model_name in lista_a_probar:
-                        try:
-                            stream = client.messages.create(
-                                model=model_name,
-                                max_tokens=900,
-                                system=system_prompt,
-                                messages=[{"role": "user", "content": prompt}],
-                                stream=True
-                            )
-
-                            for event in stream:
-                                if hasattr(event, 'type') and event.type == 'content_block_delta':
-                                    if hasattr(event.delta, 'text'):
-                                        chunk = event.delta.text
-                                        respuesta_completa += chunk
-                                        contenedor_respuesta.markdown(respuesta_completa + "▌")
-
-                            contenedor_respuesta.markdown(respuesta_completa)
-                            exito_stream = True
-                            break
-                        except Exception as e_model:
-                            ultimo_error = e_model
-                            if "not_found_error" in str(e_model) or "404" in str(e_model):
-                                continue
-                            else:
-                                raise e_model
-
-                    if not exito_stream:
-                        if ultimo_error and ("not_found_error" in str(ultimo_error) or "404" in str(ultimo_error)):
-                            respuesta_completa = (
-                                "Estimada Dra. Martín: La clave de API fue autenticada por la pasarela de Anthropic, "
-                                "pero su cuenta no tiene habilitado un modelo Claude activo en este momento. "
-                                "Por favor verifique que su organización en Anthropic Console tenga saldo de créditos cargado "
-                                "para aprovisionar los endpoints de inferencia."
-                            )
-                            contenedor_respuesta.markdown(respuesta_completa)
-                        else:
-                            raise ultimo_error if ultimo_error else Exception("No se pudo conectar a los modelos.")
                 else:
                     respuesta_completa = f"Estimada/o ({st.session_state.usuario_email}), le saludo desde la versión web de JUXALEGIS OS en el cuaderno [{act_cuad}]. Su consulta fue procesada exitosamente."
                     contenedor_respuesta.markdown(respuesta_completa)
@@ -1355,7 +1179,7 @@ if vista == "chat":
             st.session_state.audio_text_to_speak = ""
         st.rerun()
 
-# ----------------- VISTAS CON ENCABEZADO SERIF COMPACTO (PARCHE 7) -----------------
+# ----------------- OTRAS VISTAS DEL SISTEMA -----------------
 elif vista == "buscar_chats":
     st.markdown('<div class="module-header-serif">HISTORIAL Y BÚSQUEDA DE SESIONES</div>', unsafe_allow_html=True)
     st.text_input("Filtrar por palabra clave, DNI o número de expediente...", label_visibility="collapsed")
@@ -1376,10 +1200,8 @@ elif vista == "biblioteca":
     st.markdown('<div class="module-header-serif">BIBLIOTECA DE RECURSOS Y PLANILLAS</div>', unsafe_allow_html=True)
     st.info("Repositorio central de modelos procesales y normativas.")
 
-# ----------------- VISTA: WORKSPACE MULTI-HILO DEL CUADERNO -----------------
 elif vista == "ver_cuaderno":
     cuaderno = st.session_state.get("active_cuaderno", "General")
-    
     col_head_1, col_head_2 = st.columns([0.7, 0.3])
     with col_head_1:
         st.markdown(f'<div class="expediente-title-serif">EXPEDIENTE: {cuaderno}</div>', unsafe_allow_html=True)
@@ -1414,13 +1236,12 @@ elif vista == "ver_cuaderno":
                     st.session_state["active_view"] = "chat"
                     st.rerun()
     else:
-        st.info("Este cuaderno aún no tiene conversaciones iniciadas. Inicie una consulta para generar el primer hilo.")
+        st.info("Este cuaderno aún no tiene conversaciones iniciadas.")
 
     if st.button("← Volver a todos los cuadernos"):
         st.session_state["active_view"] = "todos_los_cuadernos"
         st.rerun()
 
-# ----------------- VISTA: DASHBOARD NOTEBOOKS (UNIFICADO EN ORO ROSA - PARCHE 7) -----------------
 elif vista == "todos_los_cuadernos":
     col_t1, col_t2 = st.columns([0.7, 0.3])
     with col_t1:
