@@ -935,7 +935,7 @@ if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != al
 
 opciones_voces = ["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"]
 voz_sintesis = st.sidebar.selectbox("Síntesis de Voz:", options=opciones_voces, index=0)
-leer_en_voz_alta = st.sidebar.toggle("📢 Leer respuestas en voz alta", value=False)
+leer_en_voz_alta = False
 
 st.sidebar.markdown(f"""
     <div class="user-footer">
