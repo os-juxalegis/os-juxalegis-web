@@ -112,7 +112,14 @@ def init_db_and_clean():
             fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS preferencias_usuario (
+            email TEXT PRIMARY KEY,
+            modo_operativo TEXT,
+            nombre_ia TEXT,
+            ultima_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     # Purga automática de registros y mocks hardcodeados
     nombres_mock_cuadernos = ['PRUEBE 0', 'PRUEBA', 'HOLA', 'GENERAL', 'PRUEBA 3', 'General', 'prueba 3']
     placeholders = ','.join('?' for _ in nombres_mock_cuadernos)
@@ -842,8 +849,36 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sidebar-config-header">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
     
-    perfil_seleccionado = st.selectbox("Modo Operativo:", options=list(PROMPTS_POR_PERFIL.keys()))
-    alias_ia = st.text_input("Identidad IA:", value="CHRONN")
+    # --- Carga y persistencia de preferencias por usuario ---
+_conn_pref = sqlite3.connect(DB_FILE)
+_c_pref = _conn_pref.cursor()
+_c_pref.execute("SELECT modo_operativo, nombre_ia FROM preferencias_usuario WHERE email = ?", (st.session_state.usuario_email,))
+_fila_pref = _c_pref.fetchone()
+
+_opciones_modos = list(PROMPTS_POR_PERFIL.keys())
+_default_modo = _fila_pref[0] if _fila_pref and _fila_pref[0] in _opciones_modos else _opciones_modos[0]
+_default_nombre_ia = _fila_pref[1] if _fila_pref and _fila_pref[1] else "CHRONN"
+_conn_pref.close()
+
+_idx_modo = _opciones_modos.index(_default_modo)
+perfil_seleccionado = st.selectbox("Modo Operativo:", options=_opciones_modos, index=_idx_modo)
+alias_ia = st.text_input("Identidad IA:", value=_default_nombre_ia)
+
+# Guardar si hubo cambio
+if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != alias_ia:
+    _conn_save = sqlite3.connect(DB_FILE)
+    _c_save = _conn_save.cursor()
+    _c_save.execute("""
+        INSERT INTO preferencias_usuario (email, modo_operativo, nombre_ia, ultima_modificacion)
+        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(email) DO UPDATE SET
+            modo_operativo = excluded.modo_operativo,
+            nombre_ia = excluded.nombre_ia,
+            ultima_modificacion = CURRENT_TIMESTAMP
+    """, (st.session_state.usuario_email, perfil_seleccionado, alias_ia))
+    _conn_save.commit()
+    _conn_save.close()
+    
     voz_sintesis = st.selectbox("Síntesis de Voz:", options=["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"])
     leer_en_voz_alta = st.toggle("🔊 Leer respuestas en voz alta", value=False)
 
