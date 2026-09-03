@@ -1179,7 +1179,7 @@ if vista == "chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-        st.session_state.audio_text_to_speak = ""
+    st.session_state.audio_text_to_speak = ""
 
 # Cápsula unificada interactiva estilo Gemini
     col_plus, col_input, col_mic = st.columns([0.08, 0.84, 0.08])
