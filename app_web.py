@@ -1179,19 +1179,10 @@ if vista == "chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Input docked
-    col_left_space, col_pill, col_right_space = st.columns([0.05, 0.9, 0.05])
-
-    with col_pill:
-        render_bottom_voice_dock(
-            text_to_speak=st.session_state.audio_text_to_speak,
-            enable_tts=leer_en_voz_alta,
-            voz_nombre=voz_sintesis
-        )
         st.session_state.audio_text_to_speak = ""
 
 # Cápsula unificada interactiva estilo Gemini
-    col_plus, col_input = st.columns([0.08, 0.92])
+    col_plus, col_input, col_mic = st.columns([0.08, 0.84, 0.08])
     
     with col_plus:
         with st.popover("➕", use_container_width=True):
@@ -1220,8 +1211,11 @@ if vista == "chat":
                 st.session_state["active_view"] = "musica"
                 st.rerun()
 
-    with col_input:
-        user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
+ with col_input:
+    user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
+
+with col_mic:
+    st.button("🎙️", key="btn_mic_pill", help="Dictado por voz")
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
