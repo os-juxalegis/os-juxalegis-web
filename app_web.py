@@ -1181,41 +1181,33 @@ if vista == "chat":
 
     st.session_state.audio_text_to_speak = ""
 
-# Cápsula unificada interactiva estilo Gemini
+    # Cápsula unificada interactiva estilo Gemini
     col_plus, col_input, col_mic = st.columns([0.08, 0.84, 0.08])
-    
+
     with col_plus:
         with st.popover("➕", use_container_width=True):
             st.caption("Adjuntar y Herramientas")
-            
-            # Carga de archivos y Drive
             archivo_subido = st.file_uploader("📎 Subir archivos", key="uploader_pill", label_visibility="collapsed")
             if archivo_subido is not None:
                 st.success(f"Cargado: {archivo_subido.name}")
-            
             if st.button("📁 Agregar desde Drive", use_container_width=True):
                 st.info("Conexión con Drive en desarrollo.")
-
             st.divider()
-
-            # Opciones multimedia
             if st.button("🎨 Crear imagen", key="pill_crear_img", use_container_width=True):
                 st.session_state["active_view"] = "imagenes"
                 st.rerun()
-
             if st.button("🎬 Crear video", key="pill_crear_vid", use_container_width=True):
                 st.session_state["active_view"] = "videos"
                 st.rerun()
-
             if st.button("🎵 Crear música", key="pill_crear_musica", use_container_width=True):
                 st.session_state["active_view"] = "musica"
                 st.rerun()
 
- with col_input:
-    user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
+    with col_input:
+        user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
 
-with col_mic:
-    st.button("🎙️", key="btn_mic_pill", help="Dictado por voz")
+    with col_mic:
+        st.button("🎙️", key="btn_mic_pill", help="Dictado por voz")
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
