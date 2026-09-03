@@ -22,7 +22,66 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+st.set_page_config(
+    page_title="JUXALEGIS OS – Operating System",
+    page_icon=page_icon_target,
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
+# ==========================================
+# OPTIMIZACIÓN UI/UX MOBILE-FIRST - JUXALEGIS OS
+# ==========================================
+st.markdown(
+    """
+    <style>
+    /* 1. Ocultar elementos decorativos estándar de Streamlit */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+
+    /* 2. Ajuste de contenedor principal para pantallas móviles */
+    .block-container {
+        padding-top: 1.5rem;
+        padding-bottom: 5rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* 3. Comportamiento en teléfonos móviles (ancho menor a 768px) */
+    @media (max-width: 768px) {
+        /* Colapsar barra lateral por defecto */
+        [data-testid="stSidebar"] {
+            display: none;
+        }
+
+        /* Tipografía legible en conversación */
+        .stMarkdown p {
+            font-size: 1.05rem;
+            line-height: 1.5;
+        }
+
+        /* Botones táctiles amplios estilo app nativa */
+        .stButton > button {
+            width: 100%;
+            min-height: 48px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            border-radius: 12px;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Área de entrada de texto optimizada */
+        .stChatInputContainer {
+            padding-bottom: 0.75rem;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+# ==========================================
 # ----------------- BASE DE DATOS, PERSISTENCIA & PURGA DE MOCKS -----------------
 DB_FILE = "juxalegis_os.db"
 
