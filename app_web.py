@@ -848,7 +848,7 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown('<div class="sidebar-config-header">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
-    
+    voz_sintesis = "Tomas (Argentina - Neural)"
     # --- Carga y persistencia de preferencias por usuario ---
 _conn_pref = sqlite3.connect(DB_FILE)
 _c_pref = _conn_pref.cursor()
@@ -879,7 +879,8 @@ if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != al
     _conn_save.commit()
     _conn_save.close()
     
-    voz_sintesis = st.sidebar.selectbox("Síntesis de Voz:", options=["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"])
+   opciones_voces = ["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"]
+   voz_sintesis = st.sidebar.selectbox("Síntesis de Voz:", options=opciones_voces, index=0)
     leer_en_voz_alta = st.sidebar.toggle("🔊 Leer respuestas en voz alta", value=False)
 
     st.sidebar.markdown(f"""
