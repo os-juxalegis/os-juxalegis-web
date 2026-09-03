@@ -1182,7 +1182,7 @@ if vista == "chat":
     st.session_state.audio_text_to_speak = ""
 
     # Cápsula unificada interactiva estilo Gemini
-    col_plus, col_input, col_mic = st.columns([0.08, 0.84, 0.08])
+    col_plus, col_input, col_model, col_mic = st.columns([0.06, 0.70, 0.14, 0.10])
 
     with col_plus:
         with st.popover("➕", use_container_width=True):
@@ -1205,9 +1205,51 @@ if vista == "chat":
 
     with col_input:
         user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
+    with col_model:
+        modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
+        with st.popover(f"{modelo_actual} ▾", use_container_width=True):
+            st.caption("Seleccionar Motor IA")
+            if st.button("⚡ 3.5 Flash-Lite", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Flash-Lite"
+                st.rerun()
+            if st.button("✨ 3.8 Flash", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Flash"
+                st.rerun()
+            if st.button("🧠 3.1 Pro", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Pro"
+                st.rerun()
+            if st.button("📜 Claude Haiku", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Haiku"
+                st.rerun()
 
     with col_mic:
-        st.button("🎙️", key="btn_mic_pill", help="Dictado por voz")
+        col_m1, col_m2 = st.columns(2)
+        with col_m1:
+            if st.button("🎙️", key="btn_mic_action", help="Activar dictado"):
+                st.session_state["audio_escuchando"] = True
+        with col_m2:
+            if st.button("⏹️", key="btn_stop_audio", help="Stop / Silenciar"):
+                st.session_state["audio_escuchando"] = False
+                st.session_state.audio_text_to_speak = ""
+                st.rerun()
+
+    if st.session_state.get("audio_escuchando", False):
+        st.markdown("""
+        <script>
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'es-AR';
+        recognition.interimResults = false;
+        recognition.onresult = function(event) {
+            const transcripcion = event.results[0][0].transcript;
+            const inputField = window.parent.document.querySelector('textarea[data-testid="stChatInputTextArea"]');
+            if (inputField) {
+                inputField.value = transcripcion;
+                inputField.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        };
+        recognition.start();
+        </script>
+        """, unsafe_allow_html=True)
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
