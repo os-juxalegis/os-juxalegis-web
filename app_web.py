@@ -719,12 +719,12 @@ if not st.session_state.autenticado:
             
             if btn_ingresar:
                 email_limpio = email_ingresado.strip().lower()
-                if email_limpio:
+                if email_limpio in [c.lower() for c in CORREOS_AUTORIZADOS]:
                     st.session_state.autenticado = True
                     st.session_state.usuario_email = email_limpio
                     st.rerun()
                 else:
-                    st.error("Por favor ingrese un correo o usuario para continuar.")
+                    st.error("Credenciales no autorizadas. Contacte a Dirección para gestionar su alta de acceso.")
     st.stop()
 
 # ----------------- PANEL LATERAL (SIDEBAR CON RECIENTES & INLINE KEBAB) -----------------
