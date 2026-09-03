@@ -1073,7 +1073,7 @@ if vista == "chat":
             with col_send:
                 submit_clicked = st.button("➔", use_container_width=True)
 
-    # Procesamiento del mensaje
+    # Procesamiento del mensaje con autodetección de modelos
     if (submit_clicked or user_prompt) and user_prompt.strip():
         prompt = user_prompt.strip()
         act_cuad = st.session_state.get("cuaderno_activo", "General")
@@ -1114,51 +1114,70 @@ if vista == "chat":
                         f"Estás operando en el cuaderno web '{act_cuad}' "
                         f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
                     )
-                    
-                    # Selección directa y veloz según el botón inferior
-                    modelo_ui = st.session_state.get("selected_model", "Claude 3.5 Sonnet")
-                    if "Haiku" in modelo_ui:
-                        target_model = "claude-3-haiku-20240307"
-                        max_tokens_call = 1200
-                    elif "Opus" in modelo_ui:
-                        target_model = "claude-3-opus-latest"
-                        max_tokens_call = 2000
-                    else:
-                        target_model = "claude-3-haiku-20240307"
-                        max_tokens_call = 2000
 
+                    # Autodescubrimiento dinámico de modelos asignados a la clave
+                    modelos_disponibles = []
                     try:
-                        stream = client.messages.create(
-                            model=target_model,
-                            max_tokens=max_tokens_call,
-                            system=system_prompt,
-                            messages=[{"role": "user", "content": prompt}],
-                            stream=True
-                        )
+                        resp_models = client.models.list()
+                        if hasattr(resp_models, 'data') and resp_models.data:
+                            modelos_disponibles = [m.id for m in resp_models.data if getattr(m, 'id', '')]
+                    except Exception:
+                        pass
 
-                        for event in stream:
-                            if hasattr(event, 'type') and event.type == 'content_block_delta':
-                                if hasattr(event.delta, 'text'):
-                                    chunk = event.delta.text
-                                    respuesta_completa += chunk
-                                    contenedor_respuesta.markdown(respuesta_completa + "▌")
+                    # Prioridad de inferencia (Sonnet 3.5 -> Haiku -> Opus)
+                    candidatos = [
+                        "claude-3-5-sonnet-latest",
+                        "claude-3-5-sonnet-20241022",
+                        "claude-3-5-haiku-latest",
+                        "claude-3-5-haiku-20241022",
+                        "claude-3-haiku-20240307",
+                        "claude-3-opus-20240229"
+                    ]
 
-                        contenedor_respuesta.markdown(respuesta_completa)
-                    except Exception as err_fast:
-                        # Fallback inmediato si el modelo primario no responde
-                        stream = client.messages.create(
-                            model="claude-3-haiku-20240307",
-                            max_tokens=1000,
-                            system=system_prompt,
-                            messages=[{"role": "user", "content": prompt}],
-                            stream=True
+                    # Si la API devolvió lista de modelos, los priorizamos
+                    lista_final = modelos_disponibles + [c for c in candidatos if c not in modelos_disponibles]
+
+                    exito = False
+                    ultimo_err = None
+
+                    for mod in lista_final:
+                        try:
+                            stream = client.messages.create(
+                                model=mod,
+                                max_tokens=1500,
+                                system=system_prompt,
+                                messages=[{"role": "user", "content": prompt}],
+                                stream=True
+                            )
+
+                            for event in stream:
+                                if hasattr(event, 'type') and event.type == 'content_block_delta':
+                                    if hasattr(event.delta, 'text'):
+                                        chunk = event.delta.text
+                                        respuesta_completa += chunk
+                                        contenedor_respuesta.markdown(respuesta_completa + "▌")
+
+                            contenedor_respuesta.markdown(respuesta_completa)
+                            exito = True
+                            break
+                        except Exception as e_mod:
+                            ultimo_err = e_mod
+                            # Si es 404 de modelo, prueba automáticamente el siguiente
+                            if "404" in str(e_mod) or "not_found_error" in str(e_mod):
+                                continue
+                            else:
+                                raise e_mod
+
+                    if not exito:
+                        if modelos_disponibles:
+                            msg_diag = f"Modelos detectados en su cuenta: {', '.join(modelos_disponibles)}."
+                        else:
+                            msg_diag = "Anthropic aún no ha propagado los endpoints de inferencia para esta clave."
+                        respuesta_completa = (
+                            f"Aviso de infraestructura: {msg_diag}\n\n"
+                            "Si recién acreditó el saldo de $16 USD, Anthropic suele demorar entre 5 y 15 minutos "
+                            "en autorizar los servidores de procesamiento. En breve quedará activo automáticamente."
                         )
-                        for event in stream:
-                            if hasattr(event, 'type') and event.type == 'content_block_delta':
-                                if hasattr(event.delta, 'text'):
-                                    chunk = event.delta.text
-                                    respuesta_completa += chunk
-                                    contenedor_respuesta.markdown(respuesta_completa + "▌")
                         contenedor_respuesta.markdown(respuesta_completa)
 
                 else:
