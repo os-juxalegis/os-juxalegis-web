@@ -1118,13 +1118,13 @@ if vista == "chat":
                     # Selección directa y veloz según el botón inferior
                     modelo_ui = st.session_state.get("selected_model", "Claude 3.5 Sonnet")
                     if "Haiku" in modelo_ui:
-                        target_model = "claude-3-5-sonnet-20241022"
+                        target_model = "claude-3-haiku-20240307"
                         max_tokens_call = 1200
                     elif "Opus" in modelo_ui:
                         target_model = "claude-3-opus-latest"
                         max_tokens_call = 2000
                     else:
-                        target_model = "claude-3-5-sonnet-20241022"
+                        target_model = "claude-3-haiku-20240307"
                         max_tokens_call = 2000
 
                     try:
@@ -1147,7 +1147,7 @@ if vista == "chat":
                     except Exception as err_fast:
                         # Fallback inmediato si el modelo primario no responde
                         stream = client.messages.create(
-                            model="claude-3-5-sonnet-20241022",
+                            model="claude-3-haiku-20240307",
                             max_tokens=1000,
                             system=system_prompt,
                             messages=[{"role": "user", "content": prompt}],
