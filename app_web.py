@@ -77,55 +77,58 @@ st.markdown(
             padding-bottom: 0.75rem;
         }
     } 
-    /* 4. Cápsula Unificada del Input de Chat (Burbuja Integral) */
-    .chat-pill-wrapper {
-        display: flex;
-        align-items: flex-end;
-        background-color: #1a1a24;
-        border: 1px solid rgba(220, 164, 138, 0.4);
-        border-radius: 20px;
-        padding: 6px 10px;
-        gap: 6px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-        margin-bottom: 10px;
+/* Estructura Cápsula Gemini */
+    [data-testid="stChatInput"] {
+        border-radius: 30px !important;
+        background-color: #1e1f24 !important;
+        border: 1px solid rgba(220, 164, 138, 0.35) !important;
+        padding: 4px 12px !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
     }
 
-    .chat-pill-wrapper:focus-within {
-        border-color: #DCA48A;
-        box-shadow: 0 0 10px rgba(220, 164, 138, 0.25);
+    [data-testid="stChatInput"]:focus-within {
+        border-color: #DCA48A !important;
+        box-shadow: 0 0 12px rgba(220, 164, 138, 0.3) !important;
     }
 
-    /* Caja de texto multilínea sin bordes propios */
-    .chat-pill-wrapper textarea {
+    [data-testid="stChatInput"] textarea {
         background: transparent !important;
         border: none !important;
         outline: none !important;
-        box-shadow: none !important;
-        color: #f1f1f1 !important;
-        resize: none !important;
-        min-height: 42px !important;
-        max-height: 180px !important;
-        font-size: 0.95rem !important;
-        line-height: 1.4 !important;
-        padding: 8px 4px !important;
+        color: #ffffff !important;
+        font-size: 1rem !important;
     }
 
-    /* Botones y popovers integrados sin recuadro individual */
-    .chat-pill-wrapper button, 
-    .chat-pill-wrapper [data-testid="stPopover"] > button {
-        background: transparent !important;
-        border: none !important;
-        box-shadow: none !important;
-        color: #DCA48A !important;
-        padding: 4px 6px !important;
-        border-radius: 8px !important;
-        height: 38px !important;
-        min-width: 36px !important;
+    /* Barra de controles embebida sobre el chat input */
+    .gemini-bar-controls {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-bottom: -46px;
+        position: relative;
+        z-index: 10;
+        padding-right: 48px;
+        pointer-events: none;
     }
 
-    .chat-pill-wrapper button:hover, 
-    .chat-pill-wrapper [data-testid="stPopover"] > button:hover {
-        background-color: rgba(220, 164, 138, 0.12) !important;
+    .gemini-bar-controls > div {
+        pointer-events: auto;
+    }
+
+    .gemini-bar-controls [data-testid="stPopover"] > button {
+        background-color: #2b2c34 !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-radius: 20px !important;
+        color: #e0e0e0 !important;
+        font-size: 0.82rem !important;
+        padding: 3px 12px !important;
+        height: 32px !important;
+    }
+
+    .gemini-bar-controls [data-testid="stPopover"] > button:hover {
+        background-color: #383944 !important;
+        border-color: #DCA48A !important;
         color: #ffffff !important;
     }
     </style>
@@ -1187,45 +1190,37 @@ if vista == "chat":
         )
         st.session_state.audio_text_to_speak = ""
 
-# Barra de herramientas superior de la cápsula (Herramientas, Modelo, Menú ...)
-    col_tools, col_mod, col_dots = st.columns([0.2, 0.6, 0.2])
-    with col_tools:
-        with st.popover("➕ Herramientas", use_container_width=True):
-            st.caption("Generación Multimedia")
-            if st.button("🎨 Crear imagen", use_container_width=True):
-                st.session_state["active_view"] = "imagenes"
-                st.rerun()
-            if st.button("🎬 Crear video", use_container_width=True):
-                st.session_state["active_view"] = "videos"
-                st.rerun()
+# Selector de modelo y menu estilo Gemini
+    nombre_corto = st.session_state.selected_model.replace("Claude ", "").replace("3.5 ", "").replace("3 ", "")
+    col_vacio, col_pill_ctrl = st.columns([0.6, 0.4])
+    with col_pill_ctrl:
+        st.markdown('<div class="gemini-bar-controls">', unsafe_allow_html=True)
+        col_m1, col_m2 = st.columns([0.7, 0.3])
+        with col_m1:
+            with st.popover(f"{nombre_corto} ▾", use_container_width=True):
+                st.caption("Seleccionar Motor IA")
+                if st.button("Sonnet 3.5 (Óptimo)", use_container_width=True):
+                    st.session_state.selected_model = "Claude 3.5 Sonnet"
+                    st.rerun()
+                if st.button("Haiku (Rápido)", use_container_width=True):
+                    st.session_state.selected_model = "Claude Haiku"
+                    st.rerun()
+                if st.button("Opus (Complejo)", use_container_width=True):
+                    st.session_state.selected_model = "Claude Opus"
+                    st.rerun()
+        with col_m2:
+            with st.popover("⋮", use_container_width=True):
+                st.caption("Opciones")
+                if st.button("🧹 Limpiar", use_container_width=True):
+                    st.session_state.messages = []
+                    st.rerun()
+                if st.button("📁 Hilos", use_container_width=True):
+                    st.session_state["active_view"] = "ver_cuaderno"
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_mod:
-        nombre_corto = st.session_state.selected_model.replace("Claude ", "").replace("3.5 ", "").replace("3 ", "")
-        with st.popover(f"⚡ Motor: {nombre_corto}", use_container_width=True):
-            st.caption("Seleccionar Modelo Activo")
-            if st.button("Sonnet 3.5 (Óptimo)", use_container_width=True):
-                st.session_state.selected_model = "Claude 3.5 Sonnet"
-                st.rerun()
-            if st.button("Haiku (Rápido)", use_container_width=True):
-                st.session_state.selected_model = "Claude Haiku"
-                st.rerun()
-            if st.button("Opus (Complejo)", use_container_width=True):
-                st.session_state.selected_model = "Claude Opus"
-                st.rerun()
-
-    with col_dots:
-        with st.popover("⋮ Opciones", use_container_width=True):
-            st.caption("Gestión del Hilo")
-            if st.button("🧹 Limpiar chat", use_container_width=True):
-                st.session_state.messages = []
-                st.rerun()
-            if st.button("📁 Ver hilos", use_container_width=True):
-                st.session_state["active_view"] = "ver_cuaderno"
-                st.rerun()
-
-    # Campo de entrada oficial multilínea (crece solo y envía con Enter)
-    user_prompt = st.chat_input(f"Escribir consulta o instrucción a {alias_display}...")
-
+    # Cápsula de entrada multilínea responsiva
+    user_prompt = st.chat_input(f"+  Preguntarle a {alias_display}...")
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
