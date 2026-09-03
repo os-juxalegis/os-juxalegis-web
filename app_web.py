@@ -627,7 +627,7 @@ def obtener_claude_api_key():
             return st.secrets["ANTHROPIC_API_KEY"]
     except Exception:
         pass
-    return "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"
+    return None
 
 CLAUDE_API_KEY = obtener_claude_api_key()
 
