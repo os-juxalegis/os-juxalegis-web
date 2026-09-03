@@ -1190,37 +1190,38 @@ if vista == "chat":
         )
         st.session_state.audio_text_to_speak = ""
 
-# Selector de modelo y menu estilo Gemini
-    nombre_corto = st.session_state.selected_model.replace("Claude ", "").replace("3.5 ", "").replace("3 ", "")
-    col_vacio, col_pill_ctrl = st.columns([0.6, 0.4])
-    with col_pill_ctrl:
-        st.markdown('<div class="gemini-bar-controls">', unsafe_allow_html=True)
-        col_m1, col_m2 = st.columns([0.7, 0.3])
-        with col_m1:
-            with st.popover(f"{nombre_corto} ▾", use_container_width=True):
-                st.caption("Seleccionar Motor IA")
-                if st.button("Sonnet 3.5 (Óptimo)", use_container_width=True):
-                    st.session_state.selected_model = "Claude 3.5 Sonnet"
-                    st.rerun()
-                if st.button("Haiku (Rápido)", use_container_width=True):
-                    st.session_state.selected_model = "Claude Haiku"
-                    st.rerun()
-                if st.button("Opus (Complejo)", use_container_width=True):
-                    st.session_state.selected_model = "Claude Opus"
-                    st.rerun()
-        with col_m2:
-            with st.popover("⋮", use_container_width=True):
-                st.caption("Opciones")
-                if st.button("🧹 Limpiar", use_container_width=True):
-                    st.session_state.messages = []
-                    st.rerun()
-                if st.button("📁 Hilos", use_container_width=True):
-                    st.session_state["active_view"] = "ver_cuaderno"
-                    st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+# Cápsula unificada interactiva estilo Gemini
+    col_plus, col_input = st.columns([0.08, 0.92])
+    
+    with col_plus:
+        with st.popover("➕", use_container_width=True):
+            st.caption("Adjuntar y Herramientas")
+            
+            # Carga de archivos y Drive
+            archivo_subido = st.file_uploader("📎 Subir archivos", key="uploader_pill", label_visibility="collapsed")
+            if archivo_subido is not None:
+                st.success(f"Cargado: {archivo_subido.name}")
+            
+            if st.button("📁 Agregar desde Drive", use_container_width=True):
+                st.info("Conexión con Drive en desarrollo.")
 
-    # Cápsula de entrada multilínea responsiva
-    user_prompt = st.chat_input(f"+  Preguntarle a {alias_display}...")
+            st.divider()
+
+            # Opciones multimedia
+            if st.button("🎨 Crear imagen", key="pill_crear_img", use_container_width=True):
+                st.session_state["active_view"] = "imagenes"
+                st.rerun()
+
+            if st.button("🎬 Crear video", key="pill_crear_vid", use_container_width=True):
+                st.session_state["active_view"] = "videos"
+                st.rerun()
+
+            if st.button("🎵 Crear música", key="pill_crear_musica", use_container_width=True):
+                st.session_state["active_view"] = "musica"
+                st.rerun()
+
+    with col_input:
+        user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
