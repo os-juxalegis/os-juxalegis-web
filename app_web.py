@@ -969,7 +969,13 @@ def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, 
 vista = st.session_state.get("active_view", "chat")
 
 if vista == "chat":
-    user_name = "DRA. MARTIN"
+    email_sesion = st.session_state.get("usuario_email", "").lower()
+    if "gail" in email_sesion:
+        user_name = "GAIL"
+    elif "campos" in email_sesion:
+        user_name = "DR. CAMPOS"
+    else:
+        user_name = "DRA. MARTIN"
     alias_display = alias_ia.upper() if alias_ia else "CHRONN"
     has_messages = len(st.session_state["messages"]) > 0
     act_cuad = st.session_state.get("cuaderno_activo", "General").upper()
