@@ -1187,57 +1187,56 @@ if vista == "chat":
         )
         st.session_state.audio_text_to_speak = ""
 
-        with st.container():
         st.markdown('<div class="chat-pill-wrapper">', unsafe_allow_html=True)
-        col_add, col_input, col_model_btn, col_more, col_send = st.columns([0.06, 0.64, 0.16, 0.07, 0.07])
-        
-        with col_add:
-            with st.popover("➕", use_container_width=True):
-                st.caption("Herramientas Generativas")
-                if st.button("🎨 Crear imagen", use_container_width=True):
-                    st.session_state["active_view"] = "imagenes"
-                    st.rerun()
-                if st.button("🎬 Crear video", use_container_width=True):
-                    st.session_state["active_view"] = "videos"
-                    st.rerun()
+    col_add, col_input, col_model_btn, col_more, col_send = st.columns([0.06, 0.64, 0.16, 0.07, 0.07])
+    
+    with col_add:
+        with st.popover("➕", use_container_width=True):
+            st.caption("Herramientas Generativas")
+            if st.button("🎨 Crear imagen", use_container_width=True):
+                st.session_state["active_view"] = "imagenes"
+                st.rerun()
+            if st.button("🎬 Crear video", use_container_width=True):
+                st.session_state["active_view"] = "videos"
+                st.rerun()
 
-        with col_input:
-            user_prompt = st.text_area(
-                "Entrada",
-                placeholder=f"Escribir consulta o instrucción a {alias_display}...",
-                label_visibility="collapsed",
-                key=f"pill_input_{len(st.session_state.messages)}",
-                height=48
-            )
+    with col_input:
+        user_prompt = st.text_area(
+            "Entrada",
+            placeholder=f"Escribir consulta o instrucción a {alias_display}...",
+            label_visibility="collapsed",
+            key=f"pill_input_{len(st.session_state.messages)}",
+            height=48
+        )
 
-        with col_model_btn:
-            nombre_corto = st.session_state.selected_model.replace("Claude ", "").replace("3.5 ", "").replace("3 ", "")
-            with st.popover(f"⚡ {nombre_corto}", use_container_width=True):
-                st.caption("Modelo Activo")
-                if st.button("Sonnet 3.5 (Óptimo)", use_container_width=True):
-                    st.session_state.selected_model = "Claude 3.5 Sonnet"
-                    st.rerun()
-                if st.button("Haiku (Rápido)", use_container_width=True):
-                    st.session_state.selected_model = "Claude Haiku"
-                    st.rerun()
-                if st.button("Opus (Complejo)", use_container_width=True):
-                    st.session_state.selected_model = "Claude Opus"
-                    st.rerun()
+    with col_model_btn:
+        nombre_corto = st.session_state.selected_model.replace("Claude ", "").replace("3.5 ", "").replace("3 ", "")
+        with st.popover(f"⚡ {nombre_corto}", use_container_width=True):
+            st.caption("Modelo Activo")
+            if st.button("Sonnet 3.5 (Óptimo)", use_container_width=True):
+                st.session_state.selected_model = "Claude 3.5 Sonnet"
+                st.rerun()
+            if st.button("Haiku (Rápido)", use_container_width=True):
+                st.session_state.selected_model = "Claude Haiku"
+                st.rerun()
+            if st.button("Opus (Complejo)", use_container_width=True):
+                st.session_state.selected_model = "Claude Opus"
+                st.rerun()
 
-        with col_more:
-            with st.popover("⋮", use_container_width=True):
-                st.caption("Opciones del Cuaderno")
-                if st.button("🧹 Limpiar chat", use_container_width=True):
-                    st.session_state.messages = []
-                    st.rerun()
-                if st.button("📁 Ver hilos", use_container_width=True):
-                    st.session_state["active_view"] = "ver_cuaderno"
-                    st.rerun()
+    with col_more:
+        with st.popover("⋮", use_container_width=True):
+            st.caption("Opciones del Cuaderno")
+            if st.button("🧹 Limpiar chat", use_container_width=True):
+                st.session_state.messages = []
+                st.rerun()
+            if st.button("📁 Ver hilos", use_container_width=True):
+                st.session_state["active_view"] = "ver_cuaderno"
+                st.rerun()
 
-        with col_send:
-            submit_clicked = st.button("➔", use_container_width=True)
+    with col_send:
+        submit_clicked = st.button("➔", use_container_width=True)
 
-        st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
     # Procesamiento del mensaje con autodetección de modelos
     if (submit_clicked or user_prompt) and user_prompt.strip():
