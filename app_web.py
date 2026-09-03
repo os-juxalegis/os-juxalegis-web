@@ -1168,7 +1168,7 @@ if vista == "chat":
 
     # Mensajes
     if has_messages:
-        st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(220, 164, 138, 0.2); padding-bottom: 10px; margin-bottom: 20px;'><span class='chat-active-header-title'>{act_cuad}: {titulo_chat_activo.upper()}</span><span style='color: #8A99A8; font-size: 0.8rem; font-family: \"Times New Roman\", Times, serif;'>Modo: {perfil_seleccionado} | {alias_display}</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(220, 164, 138, 0.2); padding-bottom: 10px; margin-bottom: 20px;'><span class='chat-active-header-title'>{act_cuad}: {titulo_chat_activo.upper()}</span><span style='color: #8A99A8; font-size: 0.8rem; font-family: \"Times New Roman\", Times, serif;'>Modo: {perfil_seleccionado} | {alias_display} | Voz: {voz_sintesis}</span></div>", unsafe_allow_html=True)
 
         for msg in st.session_state["messages"]:
             with st.chat_message(msg["role"], avatar=None):
