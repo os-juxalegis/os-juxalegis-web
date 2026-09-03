@@ -876,29 +876,29 @@ if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != al
             nombre_ia = excluded.nombre_ia,
             ultima_modificacion = CURRENT_TIMESTAMP
     """, (st.session_state.usuario_email, perfil_seleccionado, alias_ia))
-    _conn_save.commit()
-    _conn_save.close()
-    
-   opciones_voces = ["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"]
-   voz_sintesis = st.sidebar.selectbox("Síntesis de Voz:", options=opciones_voces, index=0)
-    leer_en_voz_alta = st.sidebar.toggle("🔊 Leer respuestas en voz alta", value=False)
+         _conn_save.commit()
+         _conn_save.close()
 
-    st.sidebar.markdown(f"""
-        <div class="user-footer">
-            <div class="user-avatar">NM</div>
-            <div>
-                <strong style="font-size: 0.9rem; color: #fff;">{st.session_state.usuario_email}</strong><br>
-                <span style="font-size: 0.75rem; color: #DCA48A; font-weight: bold;">PRO / AUTORIZADO</span>
-            </div>
+opciones_voces = ["Tomas (Argentina - Neural)", "Mujer (Elena - Argentina)"]
+voz_sintesis = st.sidebar.selectbox("Síntesis de Voz:", options=opciones_voces, index=0)
+leer_en_voz_alta = st.sidebar.toggle("📢 Leer respuestas en voz alta", value=False)
+
+st.sidebar.markdown(f"""
+    <div class="user-footer">
+        <div class="user-avatar">NM</div>
+        <div>
+            <strong style="font-size: 0.9rem; color: #fff;">{st.session_state.usuario_email}</strong><br>
+            <span style="font-size: 0.75rem; color: #DCA48A; font-weight: bold;">PRO / AUTORIZADO</span>
         </div>
-    """, unsafe_allow_html=True)
+    </div>
+""", unsafe_allow_html=True)
 
-    if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
-        st.session_state.autenticado = False
-        st.session_state.usuario_email = ""
-        st.session_state.messages = []
-        st.rerun()
-
+if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
+    st.session_state.autenticado = False
+    st.session_state.usuario_email = ""
+    st.session_state.messages = []
+    st.rerun()
+   
 # ----------------- CONTROLADOR DE VOZ -----------------
 def render_bottom_voice_dock(text_to_speak: str = "", enable_tts: bool = False, voz_nombre: str = "Tomas"):
     es_tomas = "Tomas" in voz_nombre
