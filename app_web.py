@@ -1247,71 +1247,12 @@ if vista == "chat":
     user_prompt = ""
     if boton_enviar and texto_ingresado.strip():
         user_prompt = texto_ingresado.strip()
-with col_mic:
-        import streamlit.components.v1 as _components
-        _components.html("""
-        <div style="display: flex; gap: 6px; align-items: center; justify-content: center; height: 100%;">
-            <button id="micBtn" style="background: #242D33; border: 1px solid #DCA48A; color: #DCA48A; border-radius: 8px; width: 38px; height: 38px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;" title="Iniciar Dictado">🎙️</button>
-            <button id="stopBtn" style="background: #242D33; border: 1px solid #ef4444; color: #ef4444; border-radius: 8px; width: 38px; height: 38px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;" title="Detener">⏹️</button>
-        </div>
 
-        <script>
-        let recognizer = null;
-        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (SpeechRec) {
-            recognizer = new SpeechRec();
-            recognizer.lang = 'es-AR';
-            recognizer.continuous = true;
-            recognizer.interimResults = false;
-
-            recognizer.onresult = (e) => {
-                let texto = '';
-                for (let i = e.resultIndex; i < e.results.length; ++i) {
-                    if (e.results[i].isFinal) texto += e.results[i][0].transcript;
-                }
-                const parentDoc = window.parent.document;
-                const txtArea = parentDoc.querySelector('textarea[data-testid="stChatInputTextArea"]');
-                if (txtArea && texto) {
-                    txtArea.value = (txtArea.value ? txtArea.value + ' ' : '') + texto;
-                    txtArea.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-            };
-
-            recognizer.onerror = (e) => console.log('Error de voz:', e.error);
-        }
-
-        const micBtn = document.getElementById('micBtn');
-        const stopBtn = document.getElementById('stopBtn');
-
-        micBtn.onclick = () => {
-            if (recognizer) {
-                try {
-                    recognizer.start();
-                    micBtn.style.background = '#DCA48A';
-                    micBtn.style.color = '#161B1E';
-                } catch(err) { console.log(err); }
-            }
-        };
-
-        stopBtn.onclick = () => {
-            if (recognizer) {
-                try {
-                    recognizer.stop();
-                } catch(err) {}
-            }
-            micBtn.style.background = '#242D33';
-            micBtn.style.color = '#DCA48A';
-            window.parent.speechSynthesis.cancel();
-        };
-        </script>
-        """, height=45)
-
-# Procesamiento del mensaje con autodetección de modelos
-if user_prompt and user_prompt.strip():
-    prompt = user_prompt.strip()
-    act_cuad = st.session_state.get("cuaderno_activo", "General")
-    sess_id = st.session_state.get("current_session_id")
+    # Procesamiento del mensaje con autodetección de modelos
+    if user_prompt and user_prompt.strip():
+        prompt = user_prompt.strip()
+       act_cuad = st.session_state.get("cuaderno_activo", "General")
+       sess_id = st.session_state.get("current_session_id")
 
     titulo_limpio = prompt.replace("\n", " ")
     titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
