@@ -1203,11 +1203,10 @@ if vista == "chat":
                 st.session_state["active_view"] = "musica"
                 st.rerun()
 
-    # Contenedor de entrada con controles externos
-    col_texto, col_acciones, col_model = st.columns([0.62, 0.20, 0.18])
+    # Cuadro de entrada expandible + Acciones + Selector de Motor IA
+    col_texto, col_btn_send, col_btn_mic, col_btn_stop, col_selector = st.columns([0.70, 0.07, 0.07, 0.07, 0.09])
 
     with col_texto:
-        # Área de texto expandible para redactar y revisar cómodamente
         texto_ingresado = st.text_area(
             label=f"Preguntarle a {alias_display}...",
             placeholder=f"Escriba aquí su consulta para {alias_display} (puede expandir este cuadro)...",
@@ -1216,33 +1215,30 @@ if vista == "chat":
             key="input_consulta_usuario"
         )
 
-    with col_acciones:
-        # Fila de botones: Enviar, Micrófono y Stop
-        sub_c1, sub_c2, sub_c3 = st.columns(3)
-        with sub_c1:
-            boton_enviar = st.button("➤", help="Enviar mensaje", use_container_width=True)
-        with sub_c2:
-            st.button("🎙️", help="Iniciar grabación", key="btn_mic_start", use_container_width=True)
-        with sub_c3:
-            st.button("⏹️", help="Detener grabación", key="btn_mic_stop", use_container_width=True)
+    with col_btn_send:
+        boton_enviar = st.button("➤", help="Enviar consulta", key="btn_enviar_msg", use_container_width=True)
 
-    with col_model:
+    with col_btn_mic:
+        st.button("🎙️", help="Iniciar micrófono", key="btn_mic_start", use_container_width=True)
+
+    with col_btn_stop:
+        st.button("⏹️", help="Detener micrófono", key="btn_mic_stop", use_container_width=True)
+
+    with col_selector:
         modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
+        with col_selector:
+        modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Haiku")
         with st.popover(f"{modelo_actual} ▾", use_container_width=True):
-            st.caption("Seleccionar Motor IA")
-            if st.button("⚡ 3.5 Flash-Lite", use_container_width=True):
-                st.session_state["modelo_ia_seleccionado"] = "Flash-Lite"
-                st.rerun()
-            if st.button("✨ 3.8 Flash", use_container_width=True):
-                st.session_state["modelo_ia_seleccionado"] = "Flash"
-                st.rerun()
-            if st.button("🧠 3.1 Pro", use_container_width=True):
-                st.session_state["modelo_ia_seleccionado"] = "Pro"
-                st.rerun()
-            if st.button("📜 Claude Haiku", use_container_width=True):
+            st.caption("Nivel de Inteligencia")
+            if st.button("⚡ Haiku (Asistente General)", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Haiku"
                 st.rerun()
-
+            if st.button("🧠 Sonnet (Inteligencia Pro)", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Sonnet"
+                st.rerun()
+            if st.button("🏛️ Opus (Inteligencia Ultra)", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Opus"
+                st.rerun()
     # Disparo de la inferencia al presionar el botón Enviar
     user_prompt = ""
     if boton_enviar and texto_ingresado.strip():
