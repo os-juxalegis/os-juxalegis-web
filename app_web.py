@@ -1282,38 +1282,29 @@ with col_mic:
         </script>
         """, height=45)
 # Procesamiento del mensaje con autodetección de modelos
-if user_prompt and user_prompt.strip():
-    prompt = user_prompt.strip()
-    act_cuad = st.session_state.get("cuaderno_activo", "General")
-    sess_id = st.session_state.get("current_session_id")
+    if user_prompt and user_prompt.strip():
+        prompt = user_prompt.strip()
+        act_cuad = st.session_state.get("cuaderno_activo", "General")
+        sess_id = st.session_state.get("current_session_id")
 
-    titulo_limpio = prompt.replace("\n", " ")
-    titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
+        titulo_limpio = prompt.replace("\n", " ")
+        titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
 
-    crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
-    guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
+        crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
+        guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
 
-    st.session_state.lista_sesiones_recientes = [
-        s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != sess_id
-    ]
+        st.session_state.lista_sesiones_recientes = [
+            s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != sess_id
+        ]
 
-    nueva_entrada = {
-        "session_id": sess_id,
-        "titulo": titulo_calculado,
-        "cuaderno": act_cuad,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
+        nueva_entrada = {
+            "session_id": sess_id,
+            "titulo": titulo_calculado,
+            "cuaderno": act_cuad,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        }
         st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
-        st.session_state["messages"].append({"role": "user", "content": prompt})
-
-        with st.chat_message("user", avatar=None):
-            st.markdown(f"<span class='msg-header-user'>{user_name}:</span>\n\n{prompt}", unsafe_allow_html=True)
-
-        with st.chat_message("assistant", avatar=None):
-            st.markdown(f"<span class='msg-header-assistant'>{alias_display}:</span>", unsafe_allow_html=True)
-            contenedor_respuesta = st.empty()
-            respuesta_completa = ""
-
+        st.session_state.messages.append({"role": "user", "content": prompt})
             try:
                 if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
                     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
