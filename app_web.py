@@ -1280,8 +1280,9 @@ with col_mic:
             window.parent.speechSynthesis.cancel();
         };
         </script>
-        """, height=45)
-# Procesamiento del mensaje con autodetección de modelos
+""", height=45)
+
+    # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
         act_cuad = st.session_state.get("cuaderno_activo", "General")
@@ -1305,10 +1306,8 @@ with col_mic:
         }
         st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
         st.session_state.messages.append({"role": "user", "content": prompt})
-            try:
-                if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
-                    client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
-                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
+        try:
+            if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
                     system_prompt = (
                         f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
                         f"Estás operando en el cuaderno web '{act_cuad}' "
