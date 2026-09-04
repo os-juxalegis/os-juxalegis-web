@@ -1351,23 +1351,25 @@ if vista == "chat":
 
         guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
 
-    # Identificación de la voz configurada (Tomás / Elena / Stella)
-    voz_activa = st.session_state.get("voz_seleccionada", "Tomas")
-    audio_bytes_generado = None
+        # Identificación de la voz configurada (Tomás / Elena / Stella)
+        voz_activa = st.session_state.get("voz_seleccionada", "Tomas")
+        audio_bytes_generado = None
 
-    if leer_en_voz_alta and respuesta_completa:
-        try:
-            if "sintetizar_audio" in globals():
-                audio_bytes_generado = sintetizar_audio(respuesta_completa, voz=voz_activa)
-        except Exception:
-            audio_bytes_generado = None
+        if leer_en_voz_alta and respuesta_completa:
+            try:
+                if "sintetizar_audio" in globals():
+                    audio_bytes_generado = sintetizar_audio(respuesta_completa, voz=voz_activa)
+            except Exception:
+                audio_bytes_generado = None
 
-    # Se adjunta el audio al historial del mensaje para habilitar el reproductor
-    st.session_state["messages"].append({
-        "role": "assistant",
-        "content": respuesta_completa,
-        "audio_bytes": audio_bytes_generado
-    })
+        # Se adjunta el audio al historial del mensaje para habilitar el reproductor
+        st.session_state["messages"].append({
+            "role": "assistant",
+            "content": respuesta_completa,
+            "audio_bytes": audio_bytes_generado
+        })
+
+        st.rerun()
 
     st.rerun()
 
