@@ -1236,6 +1236,7 @@ if vista == "chat":
     user_prompt = ""
     if boton_enviar and texto_ingresado.strip():
         user_prompt = texto_ingresado.strip()
+        st.session_state["input_consulta_usuario"] = ""
 
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
@@ -1248,6 +1249,9 @@ if vista == "chat":
 
         crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
         guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
+        if "messages" not in st.session_state:
+            st.session_state["messages"] = []
+        st.session_state["messages"].append({"role": "user", "content": prompt})
         st.session_state.setdefault("messages", []).append({"role": "user", "content": prompt})
         if sess_id not in st.session_state.get("sesiones_metadata", {}):
             st.session_state.lista_sesiones_recientes = [
