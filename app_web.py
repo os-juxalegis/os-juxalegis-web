@@ -1190,9 +1190,9 @@ if vista == "chat":
     for msg in st.session_state.get("messages", []):
         with st.chat_message(msg["role"], avatar=None):
             if msg["role"] == "user":
-                st.markdown(f"**{user_name}:**\n\n{msg['content']}")
+                st.markdown(f"<span style='color: #B76E79; font-weight: bold; letter-spacing: 0.5px;'>{user_name}:</span><br>{msg['content']}", unsafe_allow_html=True)
             else:
-                st.markdown(f"**{alias_display.upper()}:**\n\n{msg['content']}")
+                st.markdown(f"<span style='color: #89CFF0; font-weight: bold; letter-spacing: 0.5px;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
