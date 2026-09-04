@@ -1240,7 +1240,7 @@ if vista == "chat":
 
         crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
         guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
-
+        st.session_state.setdefault("messages", []).append({"role": "user", "content": prompt})
         if sess_id not in st.session_state.get("sesiones_metadata", {}):
             st.session_state.lista_sesiones_recientes = [
                 s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != sess_id
@@ -1322,7 +1322,7 @@ if vista == "chat":
                 contenedor_respuesta.markdown(respuesta_completa)
 
         guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
-
+        st.session_state.setdefault("messages", []).append({"role": "assistant", "content": respuesta_completa})
         # Identificación de la voz configurada (Tomás / Elena / Stella)
         voz_activa = st.session_state.get("voz_seleccionada", "Tomas")
         audio_bytes_generado = None
