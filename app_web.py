@@ -1222,7 +1222,6 @@ if vista == "chat":
 
     # Input principal libre para habilitar el envío
     user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
-    user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
 with col_mic:
         import streamlit.components.v1 as _components
         _components.html("""
