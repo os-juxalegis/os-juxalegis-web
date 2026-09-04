@@ -1253,8 +1253,10 @@ if vista == "chat":
                 "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             }
         with st.chat_message("user"):
-            st.markdown(prompt)
+            st.markdown(f"**{user_name}:**\n\n{prompt}")
+
         with st.chat_message("assistant"):
+            st.markdown(f"**{alias_display.upper()}:**")
             contenedor_respuesta = st.empty()
             respuesta_completa = ""
 
