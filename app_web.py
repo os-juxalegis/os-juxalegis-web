@@ -1226,7 +1226,7 @@ if vista == "chat":
 
     with col_selector:
         modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
-        with col_selector:
+    with col_selector:
         modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Haiku")
         with st.popover(f"{modelo_actual} ▾", use_container_width=True):
             st.caption("Nivel de Inteligencia")
