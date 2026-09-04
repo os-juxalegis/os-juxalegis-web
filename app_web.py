@@ -1331,6 +1331,7 @@ if vista == "chat":
 
         guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
         st.session_state.setdefault("messages", []).append({"role": "assistant", "content": respuesta_completa})
+        st.rerun()
         # Identificación de la voz configurada (Tomás / Elena / Stella)
         voz_activa = st.session_state.get("voz_seleccionada", "Tomas")
         audio_bytes_generado = None
