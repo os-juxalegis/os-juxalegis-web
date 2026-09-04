@@ -1222,34 +1222,65 @@ if vista == "chat":
                 st.session_state["modelo_ia_seleccionado"] = "Haiku"
                 st.rerun()
 
-    with col_mic:
-        col_m1, col_m2 = st.columns(2)
-        with col_m1:
-            if st.button("🎙️", key="btn_mic_action", help="Activar dictado"):
-                st.session_state["audio_escuchando"] = True
-        with col_m2:
-            if st.button("⏹️", key="btn_stop_audio", help="Stop / Silenciar"):
-                st.session_state["audio_escuchando"] = False
-                st.session_state.audio_text_to_speak = ""
-                st.rerun()
+with col_mic:
+        import streamlit.components.v1 as _components
+        _components.html("""
+        <div style="display: flex; gap: 6px; align-items: center; justify-content: center; height: 100%;">
+            <button id="micBtn" style="background: #242D33; border: 1px solid #DCA48A; color: #DCA48A; border-radius: 8px; width: 38px; height: 38px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;" title="Iniciar Dictado">🎙️</button>
+            <button id="stopBtn" style="background: #242D33; border: 1px solid #ef4444; color: #ef4444; border-radius: 8px; width: 38px; height: 38px; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center;" title="Detener">⏹️</button>
+        </div>
 
-    if st.session_state.get("audio_escuchando", False):
-        st.markdown("""
         <script>
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'es-AR';
-        recognition.interimResults = false;
-        recognition.onresult = function(event) {
-            const transcripcion = event.results[0][0].transcript;
-            const inputField = window.parent.document.querySelector('textarea[data-testid="stChatInputTextArea"]');
-            if (inputField) {
-                inputField.value = transcripcion;
-                inputField.dispatchEvent(new Event('input', { bubbles: true }));
+        let recognizer = null;
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRec) {
+            recognizer = new SpeechRec();
+            recognizer.lang = 'es-AR';
+            recognizer.continuous = true;
+            recognizer.interimResults = false;
+
+            recognizer.onresult = (e) => {
+                let texto = '';
+                for (let i = e.resultIndex; i < e.results.length; ++i) {
+                    if (e.results[i].isFinal) texto += e.results[i][0].transcript;
+                }
+                const parentDoc = window.parent.document;
+                const txtArea = parentDoc.querySelector('textarea[data-testid="stChatInputTextArea"]');
+                if (txtArea && texto) {
+                    txtArea.value = (txtArea.value ? txtArea.value + ' ' : '') + texto;
+                    txtArea.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            };
+
+            recognizer.onerror = (e) => console.log('Error de voz:', e.error);
+        }
+
+        const micBtn = document.getElementById('micBtn');
+        const stopBtn = document.getElementById('stopBtn');
+
+        micBtn.onclick = () => {
+            if (recognizer) {
+                try {
+                    recognizer.start();
+                    micBtn.style.background = '#DCA48A';
+                    micBtn.style.color = '#161B1E';
+                } catch(err) { console.log(err); }
             }
         };
-        recognition.start();
+
+        stopBtn.onclick = () => {
+            if (recognizer) {
+                try {
+                    recognizer.stop();
+                } catch(err) {}
+            }
+            micBtn.style.background = '#242D33';
+            micBtn.style.color = '#DCA48A';
+            window.parent.speechSynthesis.cancel();
+        };
         </script>
-        """, unsafe_allow_html=True)
+        """, height=45)
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
