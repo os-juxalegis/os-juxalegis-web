@@ -1349,15 +1349,7 @@ if vista == "chat":
                 )
                 contenedor_respuesta.markdown(respuesta_completa)
 
-        else:
-            respuesta_completa = f"Estimada/o ({st.session_state.usuario_email}), le saludo desde la versión web de JUXALEGIS OS en el cuaderno [{act_cuad}]. Su consulta fue procesada exitosamente."
-            contenedor_respuesta.markdown(respuesta_completa)
-
-    except Exception as e:
-        respuesta_completa = f"Error al procesar la solicitud con la API: {str(e)}"
-        contenedor_respuesta.markdown(respuesta_completa)
-
-    guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
+        guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
 
     # Identificación de la voz configurada (Tomás / Elena / Stella)
     voz_activa = st.session_state.get("voz_seleccionada", "Tomas")
