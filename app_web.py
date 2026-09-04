@@ -1381,21 +1381,21 @@ if user_prompt and user_prompt.strip():
                 )
                 contenedor_respuesta.markdown(respuesta_completa)
 
-           else:
-               respuesta_completa = f"Estimada/o ({st.session_state.usuario_email}), le saludo desde la versión web de JUXALEGIS OS en el cuaderno [{act_cuad}]. Su consulta fue procesada exitosamente."
-               contenedor_respuesta.markdown(respuesta_completa)
+        else:
+            respuesta_completa = f"Estimada/o ({st.session_state.usuario_email}), le saludo desde la versión web de JUXALEGIS OS en el cuaderno [{act_cuad}]. Su consulta fue procesada exitosamente."
+            contenedor_respuesta.markdown(respuesta_completa)
 
-       except Exception as e:
-           respuesta_completa = f"Error al procesar la solicitud con la API: {str(e)}"
-           contenedor_respuesta.markdown(respuesta_completa)
+    except Exception as e:
+        respuesta_completa = f"Error al procesar la solicitud con la API: {str(e)}"
+        contenedor_respuesta.markdown(respuesta_completa)
 
-       guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
-       st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
-       if leer_en_voz_alta:
-           st.session_state.audio_text_to_speak = respuesta_completa
-       else:
-           st.session_state.audio_text_to_speak = ""
-       st.rerun()
+    guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
+    st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
+    if leer_en_voz_alta:
+        st.session_state.audio_text_to_speak = respuesta_completa
+    else:
+        st.session_state.audio_text_to_speak = ""
+    st.rerun()
 
 # ----------------- OTRAS VISTAS DEL SISTEMA -----------------
 elif vista == "buscar_chats":
