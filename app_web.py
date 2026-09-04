@@ -1280,7 +1280,7 @@ with col_mic:
             window.parent.speechSynthesis.cancel();
         };
         </script>
-""", height=45)
+        """, height=45)
 
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
