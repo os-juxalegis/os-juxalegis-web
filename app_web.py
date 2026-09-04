@@ -1166,17 +1166,25 @@ if vista == "chat":
             </div>
         """, unsafe_allow_html=True)
 
-    # Mensajes
-    user_name = (st.session_state.get("nombre_usuario") or st.session_state.get("user_name") or st.session_state.get("usuario_email", "USUARIO").split("@")[0]).upper()
-    if has_messages:
-        st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(220, 164, 138, 0.2); padding-bottom: 10px; margin-bottom: 20px;'><span class='chat-active-header-title'>{act_cuad}: {titulo_chat_activo.upper()}</span><span style='color: #8A99A8; font-size: 0.8rem; font-family: \"Times New Roman\", Times, serif;'>Modo: {perfil_seleccionado} | {alias_display} | Voz: {voz_sintesis}</span></div>", unsafe_allow_html=True)
+   # Mensajes
+    raw_user = st.session_state.get("nombre_usuario") or st.session_state.get("usuario_email", "")
+    nombre_limpio = raw_user.split("@")[0].replace(".", " ").replace("_", " ").strip()
 
-        for msg in st.session_state["messages"]:
-            with st.chat_message(msg["role"], avatar=None):
-                if msg["role"] == "user":
-                    st.markdown(f"<span class='msg-header-user'>{user_name}:</span>\n\n{msg['content']}", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<span class='msg-header-assistant'>{alias_display}:</span>\n\n{msg['content']}", unsafe_allow_html=True)
+    if "martin" in nombre_limpio.lower() or "vanina" in nombre_limpio.lower():
+        user_name = "DRA. MARTIN"
+    elif "campos" in nombre_limpio.lower() or "nestor" in nombre_limpio.lower():
+        user_name = "DR. CAMPOS"
+    elif "gayl" in nombre_limpio.lower():
+        user_name = "GAYL"
+    else:
+        user_name = nombre_limpio.upper() if nombre_limpio else "USUARIO"
+
+    for msg in st.session_state.get("messages", []):
+        with st.chat_message(msg["role"], avatar=None):
+            if msg["role"] == "user":
+                st.markdown(f"**{user_name}:**\n\n{msg['content']}")
+            else:
+                st.markdown(f"**{alias_display.upper()}:**\n\n{msg['content']}")
 
     st.markdown("<br>", unsafe_allow_html=True)
 
