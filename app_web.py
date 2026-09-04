@@ -1306,20 +1306,22 @@ if user_prompt and user_prompt.strip():
     }
     st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
     st.session_state.messages.append({"role": "user", "content": prompt})
-   try:
-       if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
-           system_prompt = (
-               f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
-               f"Estás operando en el cuaderno web '{act_cuad}' "
-               f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-           )
+    try:
+        if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
+            client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
+            fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
+            system_prompt = (
+                f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
+                f"Estás operando en el cuaderno web '{act_cuad}' "
+                f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+            )
 
-                    # Autodescubrimiento dinámico de modelos asignados a la clave
-                    modelos_disponibles = []
-                    try:
-                        resp_models = client.models.list()
-                        if hasattr(resp_models, 'data') and resp_models.data:
-                            modelos_disponibles = [m.id for m in resp_models.data if getattr(m, 'id', '')]
+            # Autodescubrimiento dinámico de modelos asignados a la clave
+            modelos_disponibles = []
+            try:
+                resp_models = client.models.list()
+                if hasattr(resp_models, 'data') and resp_models.data:
+                    modelos_disponibles = [m.id for m in resp_models.data if getattr(m, 'id', '')]
                     except Exception:
                         pass
 
