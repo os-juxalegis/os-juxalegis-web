@@ -1294,19 +1294,19 @@ if user_prompt and user_prompt.strip():
     crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
     guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
 
-        st.session_state.lista_sesiones_recientes = [
+    st.session_state.lista_sesiones_recientes = [
             s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != sess_id
-        ]
+    ]
 
-        nueva_entrada = {
-            "session_id": sess_id,
-            "titulo": titulo_calculado,
-            "cuaderno": act_cuad,
-            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        }
-        st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        try:
+    nueva_entrada = {
+        "session_id": sess_id,
+        "titulo": titulo_calculado,
+        "cuaderno": act_cuad,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+   }
+   st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
+   st.session_state.messages.append({"role": "user", "content": prompt})
+   try:
             if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
                     system_prompt = (
                         f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
