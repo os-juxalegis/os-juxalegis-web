@@ -1260,39 +1260,28 @@ if vista == "chat":
             contenedor_respuesta = st.empty()
             respuesta_completa = ""
 
-            if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
-                client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
-                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
-                system_prompt = (
-                    f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
-                    f"Estás operando en el cuaderno web '{act_cuad}' "
-                    f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-                )
+    if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
+        client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
+        fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
+        system_prompt = (
+            f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
+            f"Estás operando en el cuaderno web '{act_cuad}' "
+            f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+        )
 
-                # Autodescubrimiento dinámico de modelos asignados a la clave
-                modelos_disponibles = []
-                try:
-                    resp_models = client.models.list()
-                    if hasattr(resp_models, 'data') and resp_models.data:
-                        modelos_disponibles = [m.id for m in resp_models.data if getattr(m, 'id', '')]
-                except Exception:
-                    pass
-            candidatos = [
-                "claude-3-5-sonnet-latest",
-                "claude-3-5-sonnet-20241022",
-                "claude-3-5-haiku-latest",
-                "claude-3-5-haiku-20241022",
-                "claude-3-haiku-20240307",
-                "claude-3-opus-20240229"
-            ]
+        modelo_elegido = st.session_state.get("modelo_ia_seleccionado", "Haiku")
+        if modelo_elegido == "Opus":
+            candidatos = ["claude-3-opus-20240229", "claude-3-opus-latest"]
+        elif modelo_elegido == "Sonnet":
+            candidatos = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest"]
+        else:
+            candidatos = ["claude-3-5-haiku-20241022", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"]
 
-            # Si la API devolvió lista de modelos, los priorizamos
-            lista_final = modelos_disponibles + [c for c in candidatos if c not in modelos_disponibles]
+        lista_final = candidatos
+        exito = False
+        ultimo_err = None
 
-            exito = False
-            ultimo_err = None
-
-            for mod in lista_final:
+        for mod in lista_final:
                 try:
                     stream = client.messages.create(
                         model=mod,
