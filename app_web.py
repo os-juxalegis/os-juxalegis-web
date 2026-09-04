@@ -1359,27 +1359,27 @@ if user_prompt and user_prompt.strip():
                                 contenedor_respuesta.markdown(respuesta_completa + "▌")
 
                         contenedor_respuesta.markdown(respuesta_completa)
-                        exito = True
-                        break
-                    except Exception as e_mod:
-                        ultimo_err = e_mod
-                        # Si es 404 de modelo, prueba automáticamente el siguiente
-                        if "404" in str(e_mod) or "not_found_error" in str(e_mod):
-                            continue
-                        else:
-                            raise e_mod
-
-                if not exito:
-                    if modelos_disponibles:
-                        msg_diag = f"Modelos detectados en su cuenta: {', '.join(modelos_disponibles)}."
+                    exito = True
+                    break
+                except Exception as e_mod:
+                    ultimo_err = e_mod
+                    # Si es 404 de modelo, prueba automáticamente el siguiente
+                    if "404" in str(e_mod) or "not_found_error" in str(e_mod):
+                        continue
                     else:
-                        msg_diag = "Anthropic aún no ha propagado los endpoints de inferencia para esta clave."
-                    respuesta_completa = (
-                        f"Aviso de infraestructura: {msg_diag}\n\n"
-                        "Si recién acreditó el saldo de $16 USD, Anthropic suele demorar entre 5 y 15 minutos "
-                        "en autorizar los servidores de procesamiento. En breve quedará activo automáticamente."
-                    )
-                    contenedor_respuesta.markdown(respuesta_completa)
+                        raise e_mod
+
+            if not exito:
+                if modelos_disponibles:
+                    msg_diag = f"Modelos detectados en su cuenta: {', '.join(modelos_disponibles)}."
+                else:
+                    msg_diag = "Anthropic aún no ha propagado los endpoints de inferencia para esta clave."
+                respuesta_completa = (
+                    f"Aviso de infraestructura: {msg_diag}\n\n"
+                    "Si recién acreditó el saldo de $16 USD, Anthropic suele demorar entre 5 y 15 minutos "
+                    "en autorizar los servidores de procesamiento. En breve quedará activo automáticamente."
+                )
+                contenedor_respuesta.markdown(respuesta_completa)
 
            else:
                respuesta_completa = f"Estimada/o ({st.session_state.usuario_email}), le saludo desde la versión web de JUXALEGIS OS en el cuaderno [{act_cuad}]. Su consulta fue procesada exitosamente."
