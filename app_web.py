@@ -1303,16 +1303,16 @@ if user_prompt and user_prompt.strip():
         "titulo": titulo_calculado,
         "cuaderno": act_cuad,
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-   }
-   st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
-   st.session_state.messages.append({"role": "user", "content": prompt})
+    }
+    st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
+    st.session_state.messages.append({"role": "user", "content": prompt})
    try:
-            if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
-                    system_prompt = (
-                        f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
-                        f"Estás operando en el cuaderno web '{act_cuad}' "
-                        f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-                    )
+       if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
+           system_prompt = (
+               f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
+               f"Estás operando en el cuaderno web '{act_cuad}' "
+               f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+           )
 
                     # Autodescubrimiento dinámico de modelos asignados a la clave
                     modelos_disponibles = []
