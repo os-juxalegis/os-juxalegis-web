@@ -1203,24 +1203,25 @@ if vista == "chat":
                 st.session_state["active_view"] = "musica"
                 st.rerun()
 
-# Selector de modelo
-modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
-with st.popover(f"{modelo_actual} ▾", use_container_width=True):
-    st.caption("Seleccionar Motor IA")
-    if st.button("⚡ 3.5 Flash-Lite", use_container_width=True):
-        st.session_state["modelo_ia_seleccionado"] = "Flash-Lite"
-        st.rerun()
-    if st.button("✨ 3.8 Flash", use_container_width=True):
-        st.session_state["modelo_ia_seleccionado"] = "Flash"
-        st.rerun()
-    if st.button("🧠 3.1 Pro", use_container_width=True):
-        st.session_state["modelo_ia_seleccionado"] = "Pro"
-        st.rerun()
-    if st.button("📜 Claude Haiku", use_container_width=True):
-        st.session_state["modelo_ia_seleccionado"] = "Haiku"
-        st.rerun()
+    # Selector de modelo
+    modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
+    with st.popover(f"{modelo_actual} ▾", use_container_width=True):
+        st.caption("Seleccionar Motor IA")
+        if st.button("⚡ 3.5 Flash-Lite", use_container_width=True):
+            st.session_state["modelo_ia_seleccionado"] = "Flash-Lite"
+            st.rerun()
+        if st.button("✨ 3.8 Flash", use_container_width=True):
+            st.session_state["modelo_ia_seleccionado"] = "Flash"
+            st.rerun()
+        if st.button("🧠 3.1 Pro", use_container_width=True):
+            st.session_state["modelo_ia_seleccionado"] = "Pro"
+            st.rerun()
+        if st.button("📜 Claude Haiku", use_container_width=True):
+            st.session_state["modelo_ia_seleccionado"] = "Haiku"
+            st.rerun()
 
     # Input principal libre para habilitar el envío
+    user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
     user_prompt = st.chat_input(f"Preguntarle a {alias_display}...")
 with col_mic:
         import streamlit.components.v1 as _components
