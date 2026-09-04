@@ -1251,14 +1251,14 @@ if vista == "chat":
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
-       act_cuad = st.session_state.get("cuaderno_activo", "General")
-       sess_id = st.session_state.get("current_session_id")
+        act_cuad = st.session_state.get("cuaderno_activo", "General")
+        sess_id = st.session_state.get("current_session_id")
 
-    titulo_limpio = prompt.replace("\n", " ")
-    titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
+        titulo_limpio = prompt.replace("\n", " ")
+        titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
 
-    crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
-    guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
+        crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
+        guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
 
     st.session_state.lista_sesiones_recientes = [
             s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != sess_id
