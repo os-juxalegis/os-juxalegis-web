@@ -1281,12 +1281,13 @@ with col_mic:
         };
         </script>
         """, height=45)
+
     # Procesamiento del mensaje con autodetección de modelos
     if user_prompt and user_prompt.strip():
         prompt = user_prompt.strip()
         act_cuad = st.session_state.get("cuaderno_activo", "General")
         sess_id = st.session_state.get("current_session_id")
-        
+
         titulo_limpio = prompt.replace("\n", " ")
         titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
 
