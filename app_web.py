@@ -1167,6 +1167,7 @@ if vista == "chat":
         """, unsafe_allow_html=True)
 
     # Mensajes
+    user_name = (st.session_state.get("nombre_usuario") or st.session_state.get("user_name") or st.session_state.get("usuario_email", "USUARIO").split("@")[0]).upper()
     if has_messages:
         st.markdown(f"<div style='display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid rgba(220, 164, 138, 0.2); padding-bottom: 10px; margin-bottom: 20px;'><span class='chat-active-header-title'>{act_cuad}: {titulo_chat_activo.upper()}</span><span style='color: #8A99A8; font-size: 0.8rem; font-family: \"Times New Roman\", Times, serif;'>Modo: {perfil_seleccionado} | {alias_display} | Voz: {voz_sintesis}</span></div>", unsafe_allow_html=True)
 
@@ -1180,28 +1181,6 @@ if vista == "chat":
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.session_state.audio_text_to_speak = ""
-
-    # Cápsula unificada interactiva estilo Gemini
-    col_plus, col_input, col_model, col_mic = st.columns([0.06, 0.70, 0.14, 0.10])
-
-    with col_plus:
-        with st.popover("➕", use_container_width=True):
-            st.caption("Adjuntar y Herramientas")
-            archivo_subido = st.file_uploader("📎 Subir archivos", key="uploader_pill", label_visibility="collapsed")
-            if archivo_subido is not None:
-                st.success(f"Cargado: {archivo_subido.name}")
-            if st.button("📁 Agregar desde Drive", use_container_width=True):
-                st.info("Conexión con Drive en desarrollo.")
-            st.divider()
-            if st.button("🎨 Crear imagen", key="pill_crear_img", use_container_width=True):
-                st.session_state["active_view"] = "imagenes"
-                st.rerun()
-            if st.button("🎬 Crear video", key="pill_crear_vid", use_container_width=True):
-                st.session_state["active_view"] = "videos"
-                st.rerun()
-            if st.button("🎵 Crear música", key="pill_crear_musica", use_container_width=True):
-                st.session_state["active_view"] = "musica"
-                st.rerun()
 
     # Cuadro de entrada expandible + Acciones + Selector de Motor IA
     col_texto, col_btn_send, col_btn_mic, col_btn_stop, col_selector = st.columns([0.70, 0.07, 0.07, 0.07, 0.09])
