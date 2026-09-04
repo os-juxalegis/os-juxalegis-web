@@ -1260,18 +1260,19 @@ if vista == "chat":
         crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
         guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
 
-    st.session_state.lista_sesiones_recientes = [
-            s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != sess_id
-    ]
+        if sess_id not in st.session_state.get("sesiones_metadata", {}):
+            st.session_state.lista_sesiones_recientes = [
+                s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != sess_id
+            ]
 
-    nueva_entrada = {
-        "session_id": sess_id,
-        "titulo": titulo_calculado,
-        "cuaderno": act_cuad,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-    st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+            nueva_entrada = {
+                "session_id": sess_id,
+                "titulo": titulo_calculado,
+                "cuaderno": act_cuad,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            }
+            st.session_state.lista_sesiones_recientes.insert(0, nueva_entrada)
+        st.session_state.messages.append({"role": "user", "content": prompt})
     try:
         if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
             client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
