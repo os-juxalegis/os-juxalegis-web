@@ -1134,7 +1134,15 @@ if vista == "chat":
     c = conn.cursor()
     c.execute("SELECT titulo FROM sesiones WHERE session_id = ?", (sess_id,))
     row_sesion = c.fetchone()
+    
+    # Cargar el historial completo de la sesión si no está cargado o cambió
+    if sess_id:
+        c.execute("SELECT role, content FROM mensajes WHERE session_id = ? ORDER BY id ASC", (sess_id,))
+        filas_mensajes = c.fetchall()
+        st.session_state["messages"] = [{"role": r[0], "content": r[1]} for r in filas_mensajes]
+    
     conn.close()
+    has_messages = len(st.session_state.get("messages", [])) > 0
 
     titulo_chat_activo = row_sesion[0] if (row_sesion and row_sesion[0]) else "NUEVA CONVERSACIÓN"
 
