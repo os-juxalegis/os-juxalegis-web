@@ -161,13 +161,11 @@ def init_db_and_clean():
             ultima_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    # Purga automática de registros y mocks hardcodeados
     nombres_mock_cuadernos = ['PRUEBE 0', 'PRUEBA', 'HOLA', 'GENERAL', 'PRUEBA 3', 'General', 'prueba 3']
     placeholders = ','.join('?' for _ in nombres_mock_cuadernos)
     c.execute(f"DELETE FROM cuadernos WHERE UPPER(nombre) IN ({placeholders})", 
               [n.upper() for n in nombres_mock_cuadernos])
     
-    # Purga de hilos dummy
     c.execute("DELETE FROM sesiones WHERE LOWER(titulo) LIKE '%hola%' OR LOWER(titulo) LIKE '%prueba%'")
     c.execute("DELETE FROM chats WHERE LOWER(content) LIKE '%hola%' OR LOWER(content) LIKE '%prueba%'")
     
@@ -698,7 +696,6 @@ if "audio_text_to_speak" not in st.session_state:
 if "lista_sesiones_recientes" not in st.session_state:
     st.session_state.lista_sesiones_recientes = obtener_sesiones_recientes_db(limite=8)
 
-# Estado para controlar el bloqueo del input
 if "pending_message" not in st.session_state:
     st.session_state["pending_message"] = ""
 
@@ -866,7 +863,6 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sidebar-config-header">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
     
-# --- Carga y persistencia de preferencias por usuario ---
 _conn_pref = sqlite3.connect(DB_FILE)
 _c_pref = _conn_pref.cursor()
 _c_pref.execute("SELECT modo_operativo, nombre_ia FROM preferencias_usuario WHERE email = ?", (st.session_state.usuario_email,))
@@ -881,7 +877,6 @@ _idx_modo = _opciones_modos.index(_default_modo)
 perfil_seleccionado = st.sidebar.selectbox("Modo Operativo:", options=_opciones_modos, index=_idx_modo)
 alias_ia = st.sidebar.text_input("Identidad IA:", value=_default_nombre_ia)
 
-# Guardar si hubo cambio
 if not _fila_pref or _fila_pref[0] != perfil_seleccionado or _fila_pref[1] != alias_ia:
     _conn_save = sqlite3.connect(DB_FILE)
     _c_save = _conn_save.cursor()
@@ -922,7 +917,6 @@ vista = st.session_state.get("active_view", "chat")
 if vista == "chat":
     email_sesion = st.session_state.get("usuario_email", "").lower()
     
-    # Lógica de nombre dinámico adaptada para que aparezca correctamente el usuario en base al login
     if "gail" in email_sesion:
         user_name = "GAIL"
     elif "campos" in email_sesion:
@@ -941,7 +935,6 @@ if vista == "chat":
     c.execute("SELECT titulo FROM sesiones WHERE session_id = ?", (sess_id,))
     row_sesion = c.fetchone()
     
-    # Cargar el historial completo de la sesión si no está cargado o cambió
     if sess_id:
         c.execute("SELECT role, content FROM chats WHERE session_id = ? ORDER BY id ASC", (sess_id,))
         filas_mensajes = c.fetchall()
@@ -952,7 +945,6 @@ if vista == "chat":
 
     titulo_chat_activo = row_sesion[0] if (row_sesion and row_sesion[0]) else "NUEVA CONVERSACIÓN"
 
-    # Panel de Fuentes
     with st.expander("📁 Agregar fuentes y documentos al cuaderno actual"):
         archivo_subido = st.file_uploader("Subir archivos (PDF, TXT, Imágenes, Audio):", type=["png", "jpg", "jpeg", "pdf", "txt", "wav", "mp3"])
         if archivo_subido:
@@ -966,7 +958,6 @@ if vista == "chat":
         fuentes_actuales = st.session_state.fuentes_cuadernos.get(act_cuad, [])
         st.write(f"**Fuentes activas en este cuaderno:** {', '.join(fuentes_actuales) if fuentes_actuales else 'Ninguna'}")
 
-    # Hero State
     if not has_messages:
         st.markdown(f"""
             <div class="hero-empty-container">
@@ -980,33 +971,25 @@ if vista == "chat":
             </div>
         """, unsafe_allow_html=True)
 
-    # ==============================================================
-    # RENDERIZADO DEL HISTORIAL DE MENSAJES CON LOS COLORES EXACTOS
-    # ==============================================================
+    # Renderizado del historial de mensajes con Colores Exactos
     for msg in st.session_state.get("messages", []):
         with st.chat_message(msg["role"], avatar=None):
             if msg["role"] == "user":
-                # Rosa Oro para el usuario (#DCA48A)
                 st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{msg['content']}", unsafe_allow_html=True)
             else:
-                # Celeste Bebé para la IA (#89CFF0)
                 st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.session_state.audio_text_to_speak = ""
-
-    # ==============================================================
-    # SOLUCIÓN DEL INPUT "TRABADO": CALLBACK PARA EL TEXT AREA
-    # ==============================================================
+    # Función que captura el mensaje
     def procesar_envio_mensaje():
         texto = st.session_state.input_consulta_usuario
         if texto and texto.strip():
             st.session_state["pending_message"] = texto.strip()
-            st.session_state["input_consulta_usuario"] = "" # Limpia al instante
+            st.session_state["input_consulta_usuario"] = ""
 
-    # Cuadro de entrada expandible + Acciones + Selector de Motor IA
-    col_texto, col_btn_send, col_btn_mic, col_btn_stop, col_selector = st.columns([0.70, 0.07, 0.07, 0.07, 0.09])
+    # SECCIÓN INFERIOR AJUSTADA PARA QUE EL MICRÓFONO REACCIONE A NIVEL NAVEGADOR
+    col_texto, col_btn_send, col_btn_voice, col_selector = st.columns([0.70, 0.07, 0.14, 0.09])
 
     with col_texto:
         texto_ingresado = st.text_area(
@@ -1015,33 +998,99 @@ if vista == "chat":
             height=70,
             label_visibility="collapsed",
             key="input_consulta_usuario",
-            on_change=procesar_envio_mensaje  # Ejecuta la limpieza instantánea al dar Ctrl+Enter
+            on_change=procesar_envio_mensaje 
         )
 
     with col_btn_send:
         boton_enviar = st.button("➤", help="Enviar consulta", key="btn_enviar_msg", use_container_width=True, on_click=procesar_envio_mensaje)
 
-    with col_btn_mic:
-        st.button("🎙️", help="Iniciar micrófono", key="btn_mic_start", use_container_width=True)
-
-    with col_btn_stop:
-        st.button("⏹️", help="Detener micrófono", key="btn_mic_stop", use_container_width=True)
+    with col_btn_voice:
+        # Se inyecta código HTML directo para los botones de voz, respetando tus estilos visuales.
+        # Streamlit prohíbe activar el micro nativo por Python, así que forzamos la ruta JS.
+        voice_html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <style>
+            body { margin: 0; padding: 0; display: flex; gap: 8px; background: transparent; }
+            .btn { 
+                flex: 1; 
+                background-color: #242D33; 
+                color: #E1E6EB; 
+                border: 1px solid #DCA48A; 
+                border-radius: 4px; 
+                height: 43px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                cursor: pointer; 
+                font-size: 1.1rem;
+                transition: all 0.2s;
+            }
+            .btn:hover { background-color: #DCA48A; color: #1B2226; border-color: #DCA48A; }
+            .recording { background-color: #ef4444 !important; color: white !important; border-color: #ef4444 !important; }
+        </style>
+        </head>
+        <body>
+            <button id="btnMic" class="btn" title="Iniciar micrófono">🎙️</button>
+            <button id="btnStop" class="btn" title="Detener micrófono">⏹️</button>
+            
+            <script>
+                var recognizer = null;
+                document.getElementById('btnMic').onclick = function() {
+                    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (!SR) { alert("Su navegador no soporta dictado por voz (use Chrome o Edge)."); return; }
+                    
+                    if (recognizer) recognizer.stop();
+                    recognizer = new SR();
+                    recognizer.lang = 'es-AR';
+                    recognizer.continuous = true;
+                    recognizer.interimResults = true;
+                    
+                    recognizer.onstart = function() { document.getElementById('btnMic').classList.add('recording'); };
+                    
+                    recognizer.onresult = function(event) {
+                        var text = '';
+                        for (var i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) text += event.results[i][0].transcript + ' ';
+                        }
+                        if (text.trim() !== "") {
+                            var textareas = window.parent.document.querySelectorAll('textarea');
+                            if (textareas.length > 0) {
+                                var inp = textareas[0];
+                                var prev = inp.value ? inp.value + " " : "";
+                                var nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                                nativeSetter.call(inp, prev + text.trim());
+                                inp.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        }
+                    };
+                    recognizer.onerror = function() { document.getElementById('btnMic').classList.remove('recording'); };
+                    recognizer.onend = function() { document.getElementById('btnMic').classList.remove('recording'); };
+                    recognizer.start();
+                };
+                
+                document.getElementById('btnStop').onclick = function() { if (recognizer) recognizer.stop(); };
+            </script>
+        </body>
+        </html>
+        """
+        components.html(voice_html, height=45)
 
     with col_selector:
         modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Haiku")
         with st.popover(f"{modelo_actual} ▾", use_container_width=True):
-            st.caption("Nivel de Inteligencia")
-            if st.button("⚡ Haiku (Asistente General)", use_container_width=True):
+            st.caption("Nivel Inteligencia")
+            if st.button("⚡ Haiku", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Haiku"
                 st.rerun()
-            if st.button("🧠 Sonnet (Inteligencia Pro)", use_container_width=True):
+            if st.button("🧠 Sonnet", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Sonnet"
                 st.rerun()
-            if st.button("🏛️ Opus (Inteligencia Ultra)", use_container_width=True):
+            if st.button("🏛️ Opus", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Opus"
                 st.rerun()
 
-    # Disparo de la inferencia desde el estado pendiente (evita bloqueos visuales)
     user_prompt = st.session_state.pop("pending_message", "")
     
     if user_prompt:
@@ -1052,86 +1101,94 @@ if vista == "chat":
         titulo_limpio = prompt.replace("\n", " ")
         titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
 
-        crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
-        guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
-        
-        if "messages" not in st.session_state:
-            st.session_state["messages"] = []
-        st.session_state["messages"].append({"role": "user", "content": prompt})
+        # --- CANDADO DE SEGURIDAD (Evita que el mensaje salga duplicado) ---
+        es_duplicado = False
+        if st.session_state.get("messages") and len(st.session_state["messages"]) > 0:
+            last_msg = st.session_state["messages"][-1]
+            if last_msg["role"] == "user" and last_msg["content"] == prompt:
+                es_duplicado = True
 
-        # Mostrar instantáneamente el mensaje del usuario con Rosa Oro
-        with st.chat_message("user", avatar=None):
-            st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{prompt}", unsafe_allow_html=True)
+        if not es_duplicado:
+            crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
+            guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
             
-        # JS Inyectado para forzar Scroll automático al enviar el mensaje
-        components.html("<script>window.parent.document.querySelector('.main').scrollTo(0, window.parent.document.querySelector('.main').scrollHeight);</script>", height=0)
+            # --- ACTUALIZACIÓN DE RECIENTES EN TIEMPO REAL ---
+            st.session_state.lista_sesiones_recientes = obtener_sesiones_recientes_db(limite=8)
 
-        respuesta_completa = ""
+            if "messages" not in st.session_state:
+                st.session_state["messages"] = []
+            st.session_state["messages"].append({"role": "user", "content": prompt})
 
-        # PREPARAR EL CONTENEDOR PARA LA RESPUESTA DE LA IA (Faltaba en tu código original)
-        with st.chat_message("assistant", avatar=None):
-            st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
-            contenedor_respuesta = st.empty()
+            with st.chat_message("user", avatar=None):
+                st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{prompt}", unsafe_allow_html=True)
+                
+            components.html("<script>window.parent.document.querySelector('.main').scrollTo(0, window.parent.document.querySelector('.main').scrollHeight);</script>", height=0)
 
-        if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
-            client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
-            fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
-            system_prompt = (
-                f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
-                f"Estás operando en el cuaderno web '{act_cuad}' "
-                f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-            )
+            respuesta_completa = ""
+            with st.chat_message("assistant", avatar=None):
+                st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
+                contenedor_respuesta = st.empty()
 
-            modelo_elegido = st.session_state.get("modelo_ia_seleccionado", "Haiku")
-            if modelo_elegido == "Opus":
-                candidatos = ["claude-3-opus-20240229", "claude-3-opus-latest"]
-            elif modelo_elegido == "Sonnet":
-                candidatos = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest"]
-            else:
-                candidatos = ["claude-3-5-haiku-20241022", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"]
+            if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
+                client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
+                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
+                system_prompt = (
+                    f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
+                    f"Estás operando en el cuaderno web '{act_cuad}' "
+                    f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+                )
 
-            exito = False
-            ultimo_err = None
+                modelo_elegido = st.session_state.get("modelo_ia_seleccionado", "Haiku")
+                if modelo_elegido == "Opus":
+                    candidatos = ["claude-3-opus-20240229", "claude-3-opus-latest"]
+                elif modelo_elegido == "Sonnet":
+                    candidatos = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest"]
+                else:
+                    candidatos = ["claude-3-5-haiku-20241022", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"]
 
-            # CORRECCIÓN DE INDENTACIÓN (El Try...Except estaba desfasado en tu script)
-            for mod in candidatos:
-                try:
-                    stream = client.messages.create(
-                        model=mod,
-                        max_tokens=1500,
-                        system=system_prompt,
-                        messages=[{"role": "user", "content": prompt}],
-                        stream=True
-                    )
+                exito = False
+                ultimo_err = None
 
-                    for event in stream:
-                        if hasattr(event, 'type') and event.type == 'content_block_delta':
-                            if hasattr(event.delta, 'text'):
-                                chunk = event.delta.text
-                                respuesta_completa += chunk
-                                contenedor_respuesta.markdown(respuesta_completa + "▌")
+                for mod in candidatos:
+                    try:
+                        stream = client.messages.create(
+                            model=mod,
+                            max_tokens=1500,
+                            system=system_prompt,
+                            messages=[{"role": "user", "content": prompt}],
+                            stream=True
+                        )
 
+                        for event in stream:
+                            if hasattr(event, 'type') and event.type == 'content_block_delta':
+                                if hasattr(event.delta, 'text'):
+                                    chunk = event.delta.text
+                                    respuesta_completa += chunk
+                                    contenedor_respuesta.markdown(respuesta_completa + "▌")
+
+                        contenedor_respuesta.markdown(respuesta_completa)
+                        exito = True
+                        break
+                    except Exception as e_mod:
+                        ultimo_err = e_mod
+                        if "404" in str(e_mod) or "not_found_error" in str(e_mod):
+                            continue
+                        else:
+                            break # En lugar de romper la app, sale del ciclo para informar el error.
+
+                if not exito:
+                    respuesta_completa = f"Aviso de infraestructura: Fallo al contactar el modelo. Detalles técnicos para soporte: {str(ultimo_err)}"
                     contenedor_respuesta.markdown(respuesta_completa)
-                    exito = True
-                    break
-                except Exception as e_mod:
-                    ultimo_err = e_mod
-                    if "404" in str(e_mod) or "not_found_error" in str(e_mod):
-                        continue
-                    else:
-                        raise e_mod
 
-            if not exito:
-                respuesta_completa = "Aviso de infraestructura: Fallo al contactar el modelo seleccionado o la cuota de la API no está disponible."
-                contenedor_respuesta.markdown(respuesta_completa)
-
-        guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
-        st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
-        
-        # JS Inyectado para forzar Scroll automático al finalizar la respuesta
-        components.html("<script>window.parent.document.querySelector('.main').scrollTo({top: window.parent.document.querySelector('.main').scrollHeight, behavior: 'smooth'});</script>", height=0)
-        
-        st.rerun()
+            guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
+            
+            # --- SE ACTUALIZA NUEVAMENTE EL HISTORIAL PARA QUE APAREZCA DE INMEDIATO ---
+            st.session_state.lista_sesiones_recientes = obtener_sesiones_recientes_db(limite=8)
+            st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
+            
+            components.html("<script>window.parent.document.querySelector('.main').scrollTo({top: window.parent.document.querySelector('.main').scrollHeight, behavior: 'smooth'});</script>", height=0)
+            
+            st.rerun()
 
 # ----------------- OTRAS VISTAS DEL SISTEMA -----------------
 elif vista == "buscar_chats":
