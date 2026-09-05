@@ -122,6 +122,7 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
 # ==========================================
 # ----------------- BASE DE DATOS, PERSISTENCIA & PURGA DE MOCKS -----------------
 DB_FILE = "juxalegis_os.db"
@@ -186,6 +187,7 @@ def crear_o_actualizar_sesion_db(session_id: str, primer_mensaje: str, cuaderno:
         INSERT INTO sesiones (session_id, cuaderno, titulo, ultima_actividad)
         VALUES (?, ?, ?, CURRENT_TIMESTAMP)
         ON CONFLICT(session_id) DO UPDATE SET
+            cuaderno = excluded.cuaderno,
             ultima_actividad = CURRENT_TIMESTAMP,
             titulo = CASE 
                 WHEN sesiones.titulo IS NULL OR sesiones.titulo = 'Nueva conversación' 
@@ -207,10 +209,17 @@ def guardar_mensaje_db(session_id: str, role: str, content: str, cuaderno: str =
     conn.commit()
     conn.close()
 
-def obtener_sesiones_recientes_db(limite: int = 10):
+# Obtiene sesiones filtradas estrictamente por cuaderno para evitar mezclas
+def obtener_sesiones_recientes_db(cuaderno: str = "General", limite: int = 10):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT session_id, titulo, cuaderno, ultima_actividad FROM sesiones ORDER BY ultima_actividad DESC LIMIT ?", (limite,))
+    c.execute("""
+        SELECT session_id, titulo, cuaderno, ultima_actividad 
+        FROM sesiones 
+        WHERE cuaderno = ? 
+        ORDER BY ultima_actividad DESC 
+        LIMIT ?
+    """, (cuaderno, limite))
     filas = c.fetchall()
     conn.close()
     return [{"session_id": r[0], "titulo": r[1], "cuaderno": r[2], "timestamp": r[3]} for r in filas]
@@ -632,16 +641,13 @@ if "selected_model" not in st.session_state:
 if "audio_text_to_speak" not in st.session_state:
     st.session_state.audio_text_to_speak = ""
 
-if "lista_sesiones_recientes" not in st.session_state:
-    st.session_state.lista_sesiones_recientes = obtener_sesiones_recientes_db(limite=8)
-
 if "pending_message" not in st.session_state:
     st.session_state["pending_message"] = ""
 
 if "input_consulta_usuario" not in st.session_state:
     st.session_state["input_consulta_usuario"] = ""
 
-# ----------------- LOGIN -----------------
+# ----------------- CONTROL DE ACCESO (LOGIN) -----------------
 if not st.session_state.autenticado:
     col1, col2, col3 = st.columns([1, 1.8, 1])
     with col2:
@@ -672,7 +678,7 @@ if not st.session_state.autenticado:
                     st.error("Credenciales no autorizadas. Contacte a Dirección para gestionar su alta de acceso.")
     st.stop()
 
-# ----------------- PANEL LATERAL -----------------
+# ----------------- PANEL LATERAL (SIDEBAR) -----------------
 with st.sidebar:
     logo_sidebar_html = ""
     if os.path.exists("logo.png"):
@@ -684,7 +690,7 @@ with st.sidebar:
     st.markdown(f"<div class='sidebar-brand-container'>{logo_sidebar_html}<div class='sidebar-logo-text'>JUXALEGIS</div><div class='sidebar-logo-sub'>— OPERATING SYSTEM —</div></div>", unsafe_allow_html=True)
     st.markdown("---")
 
-    if st.button("💬 Nuevo chat", use_container_width=True):
+    if st.button("💬 Nuevo chat general", use_container_width=True):
         st.session_state["active_view"] = "chat"
         st.session_state["cuaderno_activo"] = "General"
         st.session_state["active_cuaderno"] = "General"
@@ -743,13 +749,20 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.caption("RECIENTES")
     
-    sesiones_recientes = st.session_state.lista_sesiones_recientes
-    if not sesiones_recientes:
-        st.markdown("<p style='font-size:0.75rem; color:#8A99A8; padding-left:4px;'>Sin conversaciones activas</p>", unsafe_allow_html=True)
+    # RECIENTES CONTEXTUALES: Cada espacio tiene sus propios hilos sin cruzarse
+    cuad_actual_sb = st.session_state.get("cuaderno_activo", "General")
+    if cuad_actual_sb == "General":
+        st.caption("RECIENTES (GENERAL)")
     else:
-        for s_data in sesiones_recientes[:8]:
+        st.caption(f"RECIENTES ({cuad_actual_sb.upper()})")
+    
+    sesiones_recientes = obtener_sesiones_recientes_db(cuaderno=cuad_actual_sb, limite=8)
+    
+    if not sesiones_recientes:
+        st.markdown("<p style='font-size:0.75rem; color:#8A99A8; padding-left:4px;'>Sin hilos en este espacio</p>", unsafe_allow_html=True)
+    else:
+        for s_data in sesiones_recientes:
             s_id = s_data["session_id"]
             s_titulo = s_data["titulo"]
             s_cuaderno = s_data["cuaderno"]
@@ -763,7 +776,7 @@ with st.sidebar:
                 if es_hilo_actual:
                     st.markdown('<div class="active-chat-pill">', unsafe_allow_html=True)
                 
-                if st.button(label_th, key=f"btn_th_{s_id}", use_container_width=True, help=f"Cuaderno: {s_cuaderno}"):
+                if st.button(label_th, key=f"btn_th_{s_id}", use_container_width=True):
                     st.session_state["current_session_id"] = s_id
                     st.session_state["cuaderno_activo"] = s_cuaderno
                     st.session_state["active_cuaderno"] = s_cuaderno
@@ -777,13 +790,23 @@ with st.sidebar:
 
             with col_th_kebab:
                 with st.popover("···", use_container_width=True):
-                    st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase;'>Acciones de Hilo</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase;'>Opciones</p>", unsafe_allow_html=True)
                     if st.button("🔗 Compartir conversación", key=f"sh_{s_id}", use_container_width=True):
                         st.toast("Enlace copiado al portapapeles.")
                     if st.button("📌 Fijar al inicio", key=f"pin_{s_id}", use_container_width=True):
                         st.toast("Hilo fijado.")
-                    if st.button("✏️ Cambiar nombre", key=f"ren_{s_id}", use_container_width=True):
-                        st.toast("Función renombrar activada.")
+                    
+                    with st.expander("✏️ Cambiar nombre"):
+                        nuevo_nom_sb = st.text_input("Título:", value=titulo_mostrar, key=f"inp_ren_sb_{s_id}")
+                        if st.button("Guardar", key=f"btn_ren_sb_{s_id}", use_container_width=True):
+                            if nuevo_nom_sb.strip():
+                                conn_ren = sqlite3.connect(DB_FILE)
+                                c_ren = conn_ren.cursor()
+                                c_ren.execute("UPDATE sesiones SET titulo = ? WHERE session_id = ?", (nuevo_nom_sb.strip(), s_id))
+                                conn_ren.commit()
+                                conn_ren.close()
+                                st.rerun()
+                                
                     st.markdown("<div style='border-top: 1px solid rgba(220,164,138,0.2); margin: 3px 0;'></div>", unsafe_allow_html=True)
                     if st.button("🗑️ Borrar", key=f"del_h_{s_id}", use_container_width=True):
                         conn_del = sqlite3.connect(DB_FILE)
@@ -792,9 +815,6 @@ with st.sidebar:
                         c_del.execute("DELETE FROM chats WHERE session_id = ?", (s_id,))
                         conn_del.commit()
                         conn_del.close()
-                        st.session_state.lista_sesiones_recientes = [
-                            s for s in st.session_state.lista_sesiones_recientes if s["session_id"] != s_id
-                        ]
                         if st.session_state.get("current_session_id") == s_id:
                             st.session_state["messages"] = []
                         st.rerun()
@@ -907,7 +927,7 @@ if vista == "chat":
             </div>
         """, unsafe_allow_html=True)
 
-    # Historial de mensajes
+    # Mensajes de Chat
     for msg in st.session_state.get("messages", []):
         with st.chat_message(msg["role"], avatar=None):
             if msg["role"] == "user":
@@ -1027,8 +1047,11 @@ if vista == "chat":
     
     if user_prompt:
         prompt = user_prompt
-        act_cuad = st.session_state.get("cuaderno_activo", "General")
+        act_cuad_save = st.session_state.get("cuaderno_activo", "General")
         sess_id = st.session_state.get("current_session_id")
+
+        titulo_limpio = prompt.replace("\n", " ")
+        titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
 
         es_duplicado = False
         if st.session_state.get("messages") and len(st.session_state["messages"]) > 0:
@@ -1037,10 +1060,8 @@ if vista == "chat":
                 es_duplicado = True
 
         if not es_duplicado:
-            crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad)
-            guardar_mensaje_db(sess_id, "user", prompt, act_cuad)
-            
-            st.session_state.lista_sesiones_recientes = obtener_sesiones_recientes_db(limite=8)
+            crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad_save)
+            guardar_mensaje_db(sess_id, "user", prompt, act_cuad_save)
 
             if "messages" not in st.session_state:
                 st.session_state["messages"] = []
@@ -1058,37 +1079,60 @@ if vista == "chat":
 
             if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
                 client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
-                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
+                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
                 system_prompt = (
                     f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
-                    f"Estás operando en el cuaderno web '{act_cuad}' "
+                    f"Estás operando en el cuaderno web '{act_cuad_save}' "
                     f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
                 )
 
+                # Detección dinámica de modelos habilitados en la cuenta
+                modelos_cuenta = []
+                try:
+                    models_page = client.models.list(limit=50)
+                    modelos_cuenta = [m.id for m in models_page.data if hasattr(m, 'id')]
+                except Exception:
+                    pass
+
                 modelo_elegido = st.session_state.get("modelo_ia_seleccionado", "Haiku")
                 
-                # Lista exhaustiva y ordenada de nombres válidos en Anthropic
+                # Lista de candidatos por preferencia
                 if modelo_elegido == "Opus":
-                    candidatos = [
-                        "claude-3-opus-latest",
-                        "claude-3-opus-20240229"
-                    ]
+                    prioridad = ["claude-3-opus-20240229", "claude-3-opus-latest"]
                 elif modelo_elegido == "Sonnet":
-                    candidatos = [
-                        "claude-3-5-sonnet-latest",
-                        "claude-3-5-sonnet-20241022",
-                        "claude-3-5-sonnet-20240620"
-                    ]
+                    prioridad = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest", "claude-3-7-sonnet-20250219", "claude-3-sonnet-20240229"]
                 else:  # Haiku
-                    candidatos = [
-                        "claude-3-5-haiku-latest",
-                        "claude-3-5-haiku-20241022",
-                        "claude-3-haiku-20240307"
-                    ]
+                    prioridad = ["claude-3-5-haiku-20241022", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"]
+
+                # Cascada completa de contingencia
+                todos_modelos = [
+                    "claude-3-5-sonnet-20241022",
+                    "claude-3-5-sonnet-latest",
+                    "claude-3-7-sonnet-20250219",
+                    "claude-3-sonnet-20240229",
+                    "claude-3-opus-20240229",
+                    "claude-3-opus-latest",
+                    "claude-3-5-haiku-20241022",
+                    "claude-3-5-haiku-latest",
+                    "claude-3-haiku-20240307"
+                ]
+
+                # Construcción del pipeline: si la API listó modelos autorizados, los prioriza
+                candidatos = []
+                for p in prioridad:
+                    if p in modelos_cuenta and p not in candidatos:
+                        candidatos.append(p)
+                for m in modelos_cuenta:
+                    if m not in candidatos:
+                        candidatos.append(m)
+                for p in prioridad:
+                    if p not in candidatos:
+                        candidatos.append(p)
+                for t in todos_modelos:
+                    if t not in candidatos:
+                        candidatos.append(t)
 
                 exito = False
-                detalle_errores = []
-
                 for mod in candidatos:
                     try:
                         stream = client.messages.create(
@@ -1110,29 +1154,27 @@ if vista == "chat":
                         exito = True
                         break
                     except Exception as e_mod:
-                        detalle_errores.append(f"[{mod}]: {str(e_mod)}")
-                        continue
+                        # Si es 404 continúa la cascada al siguiente modelo disponible
+                        if "404" in str(e_mod) or "not_found_error" in str(e_mod):
+                            continue
+                        else:
+                            continue
 
                 if not exito:
-                    respuesta_completa = (
-                        "⚠️ **Detalle técnico de conexión con Anthropic:**\n\n"
-                        f"{'<br>'.join(detalle_errores)}"
-                    )
-                    contenedor_respuesta.markdown(respuesta_completa, unsafe_allow_html=True)
+                    respuesta_completa = "Aviso de infraestructura: Los modelos solicitados no están disponibles en este momento. Verifique los permisos de su organización en Anthropic."
+                    contenedor_respuesta.markdown(respuesta_completa)
             else:
-                respuesta_completa = "⚠️ La clave de API de Anthropic no se encuentra configurada en los Secrets del entorno."
+                respuesta_completa = "⚠️ La clave de API de Anthropic no se encuentra configurada en los Secrets."
                 contenedor_respuesta.markdown(respuesta_completa)
 
-            guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad)
-            
-            st.session_state.lista_sesiones_recientes = obtener_sesiones_recientes_db(limite=8)
+            guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad_save)
             st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
             
             components.html("<script>window.parent.document.querySelector('.main').scrollTo({top: window.parent.document.querySelector('.main').scrollHeight, behavior: 'smooth'});</script>", height=0)
             
             st.rerun()
 
-# ----------------- OTRAS VISTAS -----------------
+# ----------------- OTRAS VISTAS DEL SISTEMA -----------------
 elif vista == "buscar_chats":
     st.markdown('<div class="module-header-serif">HISTORIAL Y BÚSQUEDA DE SESIONES</div>', unsafe_allow_html=True)
     st.text_input("Filtrar por palabra clave, DNI o número de expediente...", label_visibility="collapsed")
@@ -1153,6 +1195,7 @@ elif vista == "biblioteca":
     st.markdown('<div class="module-header-serif">BIBLIOTECA DE RECURSOS Y PLANILLAS</div>', unsafe_allow_html=True)
     st.info("Repositorio central de modelos procesales y normativas.")
 
+# VISTA DEL CUADERNO: HILOS INDEPENDIENTES CON ACCIONES COMPLETAS
 elif vista == "ver_cuaderno":
     cuaderno = st.session_state.get("active_cuaderno", "General")
     col_head_1, col_head_2 = st.columns([0.7, 0.3])
@@ -1167,7 +1210,8 @@ elif vista == "ver_cuaderno":
             st.session_state["active_view"] = "chat"
             st.rerun()
 
-    st.markdown("<p style='font-size: 0.85rem; color: #8A99A8; font-weight: bold;'>HILOS DE TRABAJO ASOCIADOS:</p>", unsafe_allow_html=True)
+    st.markdown("<p style='font-size: 0.85rem; color: #8A99A8; font-weight: bold;'>HILOS DE TRABAJO ASOCIADOS A ESTE EXPEDIENTE:</p>", unsafe_allow_html=True)
+    
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute("SELECT session_id, titulo, ultima_actividad FROM sesiones WHERE cuaderno = ? ORDER BY ultima_actividad DESC", (cuaderno,))
@@ -1176,18 +1220,47 @@ elif vista == "ver_cuaderno":
 
     if hilos_cuaderno:
         for s_id, s_tit, s_act in hilos_cuaderno:
-            col_h1, col_h2 = st.columns([0.8, 0.2])
+            titulo_hilo = s_tit if s_tit else "Conversación"
+            col_h1, col_h2, col_h3 = st.columns([0.64, 0.22, 0.14])
             with col_h1:
-                titulo_hilo = s_tit if s_tit else "Conversación"
-                st.markdown(f"**💬 {titulo_hilo}** <span style='font-size:0.75rem; color:#8A99A8;'>({s_act})</span>", unsafe_allow_html=True)
+                st.markdown(f"**💬 {titulo_hilo}** <br><span style='font-size:0.75rem; color:#8A99A8;'>Actividad: {s_act}</span>", unsafe_allow_html=True)
             with col_h2:
-                if st.button("Continuar", key=f"cont_{s_id}", use_container_width=True):
+                if st.button("Continuar", key=f"cont_nb_{s_id}", use_container_width=True):
                     st.session_state["current_session_id"] = s_id
                     st.session_state["cuaderno_activo"] = cuaderno
                     st.session_state["active_cuaderno"] = cuaderno
                     st.session_state["messages"] = cargar_mensajes_sesion(s_id)
                     st.session_state["active_view"] = "chat"
                     st.rerun()
+            with col_h3:
+                with st.popover("···", use_container_width=True):
+                    st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase;'>Opciones de Hilo</p>", unsafe_allow_html=True)
+                    if st.button("🔗 Compartir conversación", key=f"sh_cuad_{s_id}", use_container_width=True):
+                        st.toast("Enlace copiado al portapapeles.")
+                    if st.button("📌 Fijar al inicio", key=f"pin_cuad_{s_id}", use_container_width=True):
+                        st.toast("Hilo fijado.")
+                    
+                    with st.expander("✏️ Cambiar nombre"):
+                        nuevo_nom_cuad = st.text_input("Nuevo nombre:", value=titulo_hilo, key=f"ren_input_{s_id}")
+                        if st.button("Guardar", key=f"btn_ren_save_{s_id}", use_container_width=True):
+                            if nuevo_nom_cuad.strip():
+                                conn_u = sqlite3.connect(DB_FILE)
+                                cu = conn_u.cursor()
+                                cu.execute("UPDATE sesiones SET titulo = ? WHERE session_id = ?", (nuevo_nom_cuad.strip(), s_id))
+                                conn_u.commit()
+                                conn_u.close()
+                                st.toast("Nombre actualizado.")
+                                st.rerun()
+                                
+                    st.markdown("<div style='border-top: 1px solid rgba(220,164,138,0.2); margin: 3px 0;'></div>", unsafe_allow_html=True)
+                    if st.button("🗑️ Borrar", key=f"del_cuad_{s_id}", use_container_width=True):
+                        conn_del = sqlite3.connect(DB_FILE)
+                        c_del = conn_del.cursor()
+                        c_del.execute("DELETE FROM sesiones WHERE session_id = ?", (s_id,))
+                        c_del.execute("DELETE FROM chats WHERE session_id = ?", (s_id,))
+                        conn_del.commit()
+                        conn_del.close()
+                        st.rerun()
     else:
         st.info("Este cuaderno aún no tiene conversaciones iniciadas.")
 
