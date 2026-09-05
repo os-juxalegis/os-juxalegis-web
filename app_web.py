@@ -124,10 +124,10 @@ st.markdown(
 )
 
 # ==========================================
-# ----------------- BASE DE DATOS, PERSISTENCIA & PURGA DE MOCKS -----------------
+# ----------------- BASE DE DATOS Y PERSISTENCIA PERMANENTE -----------------
 DB_FILE = "juxalegis_os.db"
 
-def init_db_and_clean():
+def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('''
@@ -162,18 +162,10 @@ def init_db_and_clean():
             ultima_modificacion DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    nombres_mock_cuadernos = ['PRUEBE 0', 'PRUEBA', 'HOLA', 'GENERAL', 'PRUEBA 3', 'General', 'prueba 3']
-    placeholders = ','.join('?' for _ in nombres_mock_cuadernos)
-    c.execute(f"DELETE FROM cuadernos WHERE UPPER(nombre) IN ({placeholders})", 
-              [n.upper() for n in nombres_mock_cuadernos])
-    
-    c.execute("DELETE FROM sesiones WHERE LOWER(titulo) LIKE '%hola%' OR LOWER(titulo) LIKE '%prueba%'")
-    c.execute("DELETE FROM chats WHERE LOWER(content) LIKE '%hola%' OR LOWER(content) LIKE '%prueba%'")
-    
     conn.commit()
     conn.close()
 
-init_db_and_clean()
+init_db()
 
 # ----------------- HELPERS PERSISTENCIA Y SINCRONIZACIÓN -----------------
 def crear_o_actualizar_sesion_db(session_id: str, primer_mensaje: str, cuaderno: str = "General") -> str:
@@ -209,7 +201,6 @@ def guardar_mensaje_db(session_id: str, role: str, content: str, cuaderno: str =
     conn.commit()
     conn.close()
 
-# Obtiene sesiones filtradas estrictamente por cuaderno para evitar mezclas
 def obtener_sesiones_recientes_db(cuaderno: str = "General", limite: int = 10):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -330,9 +321,9 @@ st.markdown("""
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        min-height: 48vh;
+        min-height: 44vh;
         text-align: center;
-        gap: 28px;
+        gap: 24px;
         margin: auto;
         width: 100%;
         animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -626,6 +617,9 @@ if "current_session_id" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
+if "loaded_session_id" not in st.session_state:
+    st.session_state["loaded_session_id"] = None
+
 if "cuaderno_activo" not in st.session_state:
     st.session_state["cuaderno_activo"] = "General"
 
@@ -696,6 +690,7 @@ with st.sidebar:
         st.session_state["active_cuaderno"] = "General"
         st.session_state["current_session_id"] = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         st.session_state["messages"] = []
+        st.session_state["loaded_session_id"] = st.session_state["current_session_id"]
         st.session_state.audio_text_to_speak = ""
         st.rerun()
 
@@ -725,24 +720,50 @@ with st.sidebar:
 
     st.markdown("---")
     st.caption("CUADERNOS")
+    
     with st.popover("➕ Cuaderno nuevo", use_container_width=True):
         nuevo_cuaderno_input = st.text_input("Nombre del expediente/caso:", key="input_nuevo_cuaderno_sb")
         if st.button("Crear y vincular", use_container_width=True, key="btn_create_cuaderno_sb"):
             if nuevo_cuaderno_input.strip():
+                n_cuad = nuevo_cuaderno_input.strip()
                 conn = sqlite3.connect(DB_FILE)
                 c = conn.cursor()
                 try:
-                    c.execute("INSERT INTO cuadernos (nombre) VALUES (?)", (nuevo_cuaderno_input.strip(),))
+                    c.execute("INSERT INTO cuadernos (nombre) VALUES (?)", (n_cuad,))
                     conn.commit()
                 except sqlite3.IntegrityError:
-                    st.warning("Ese cuaderno ya existe.")
+                    pass
                 conn.close()
-                if nuevo_cuaderno_input.strip() not in st.session_state.fuentes_cuadernos:
-                    st.session_state.fuentes_cuadernos[nuevo_cuaderno_input.strip()] = []
-                st.session_state["active_cuaderno"] = nuevo_cuaderno_input.strip()
-                st.session_state["cuaderno_activo"] = nuevo_cuaderno_input.strip()
+                if n_cuad not in st.session_state.fuentes_cuadernos:
+                    st.session_state.fuentes_cuadernos[n_cuad] = []
+                st.session_state["active_cuaderno"] = n_cuad
+                st.session_state["cuaderno_activo"] = n_cuad
+                st.session_state["current_session_id"] = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                st.session_state["messages"] = []
+                st.session_state["loaded_session_id"] = st.session_state["current_session_id"]
+                st.session_state["active_view"] = "chat"
+                st.rerun()
+
+    # Listado en tiempo real de los cuadernos en la barra lateral
+    conn_sb_c = sqlite3.connect(DB_FILE)
+    c_sb_c = conn_sb_c.cursor()
+    c_sb_c.execute("SELECT id, nombre FROM cuadernos ORDER BY id DESC")
+    lista_cuadernos_sb = c_sb_c.fetchall()
+    conn_sb_c.close()
+
+    if lista_cuadernos_sb:
+        for cid, cnom in lista_cuadernos_sb[:5]:
+            es_activo = (st.session_state.get("cuaderno_activo") == cnom and st.session_state.get("active_view") in ["chat", "ver_cuaderno"])
+            lbl = f"📁 {cnom}" if len(cnom) <= 18 else f"📁 {cnom[:16]}.."
+            if es_activo:
+                st.markdown('<div class="active-chat-pill">', unsafe_allow_html=True)
+            if st.button(lbl, key=f"sb_list_cuad_{cid}", use_container_width=True):
+                st.session_state["active_cuaderno"] = cnom
+                st.session_state["cuaderno_activo"] = cnom
                 st.session_state["active_view"] = "ver_cuaderno"
                 st.rerun()
+            if es_activo:
+                st.markdown('</div>', unsafe_allow_html=True)
 
     if st.button("••• Todos los cuadernos", use_container_width=True):
         st.session_state["active_view"] = "todos_los_cuadernos"
@@ -750,17 +771,25 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # RECIENTES CONTEXTUALES: Cada espacio tiene sus propios hilos sin cruzarse
+    # RECIENTES CONTEXTUALES: Cada cuaderno tiene exclusivamente su historial
     cuad_actual_sb = st.session_state.get("cuaderno_activo", "General")
     if cuad_actual_sb == "General":
         st.caption("RECIENTES (GENERAL)")
     else:
         st.caption(f"RECIENTES ({cuad_actual_sb.upper()})")
+        if st.button("⬅ Volver a General", use_container_width=True, key="btn_back_general_sb"):
+            st.session_state["cuaderno_activo"] = "General"
+            st.session_state["active_cuaderno"] = "General"
+            st.session_state["current_session_id"] = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            st.session_state["messages"] = []
+            st.session_state["loaded_session_id"] = st.session_state["current_session_id"]
+            st.session_state["active_view"] = "chat"
+            st.rerun()
     
     sesiones_recientes = obtener_sesiones_recientes_db(cuaderno=cuad_actual_sb, limite=8)
     
     if not sesiones_recientes:
-        st.markdown("<p style='font-size:0.75rem; color:#8A99A8; padding-left:4px;'>Sin hilos en este espacio</p>", unsafe_allow_html=True)
+        st.markdown("<p style='font-size:0.75rem; color:#8A99A8; padding-left:4px;'>Sin conversaciones activas</p>", unsafe_allow_html=True)
     else:
         for s_data in sesiones_recientes:
             s_id = s_data["session_id"]
@@ -781,6 +810,7 @@ with st.sidebar:
                     st.session_state["cuaderno_activo"] = s_cuaderno
                     st.session_state["active_cuaderno"] = s_cuaderno
                     st.session_state["messages"] = cargar_mensajes_sesion(s_id)
+                    st.session_state["loaded_session_id"] = s_id
                     st.session_state["active_view"] = "chat"
                     st.session_state.audio_text_to_speak = ""
                     st.rerun()
@@ -790,7 +820,7 @@ with st.sidebar:
 
             with col_th_kebab:
                 with st.popover("···", use_container_width=True):
-                    st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase;'>Opciones</p>", unsafe_allow_html=True)
+                    st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase;'>Opciones de Hilo</p>", unsafe_allow_html=True)
                     if st.button("🔗 Compartir conversación", key=f"sh_{s_id}", use_container_width=True):
                         st.toast("Enlace copiado al portapapeles.")
                     if st.button("📌 Fijar al inicio", key=f"pin_{s_id}", use_container_width=True):
@@ -817,6 +847,7 @@ with st.sidebar:
                         conn_del.close()
                         if st.session_state.get("current_session_id") == s_id:
                             st.session_state["messages"] = []
+                            st.session_state["loaded_session_id"] = None
                         st.rerun()
 
     st.markdown("---")
@@ -867,6 +898,7 @@ if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
     st.session_state.autenticado = False
     st.session_state.usuario_email = ""
     st.session_state.messages = []
+    st.session_state.loaded_session_id = None
     st.rerun()
 
 # ----------------- ÁREA PRINCIPAL -----------------
@@ -885,20 +917,14 @@ if vista == "chat":
         user_name = email_sesion.split('@')[0].upper().replace('.', ' ')
         
     alias_display = alias_ia.upper() if alias_ia else "CHRONN"
-    act_cuad = st.session_state.get("cuaderno_activo", "General").upper()
+    act_cuad = st.session_state.get("cuaderno_activo", "General")
     sess_id = st.session_state.get("current_session_id", "")
 
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT titulo FROM sesiones WHERE session_id = ?", (sess_id,))
-    row_sesion = c.fetchone()
-    
-    if sess_id:
-        c.execute("SELECT role, content FROM chats WHERE session_id = ? ORDER BY id ASC", (sess_id,))
-        filas_mensajes = c.fetchall()
-        st.session_state["messages"] = [{"role": r[0], "content": r[1]} for r in filas_mensajes]
-    
-    conn.close()
+    # Carga controlada del historial sin sobreescrituras en memoria
+    if sess_id and st.session_state.get("loaded_session_id") != sess_id:
+        st.session_state["messages"] = cargar_mensajes_sesion(sess_id)
+        st.session_state["loaded_session_id"] = sess_id
+
     has_messages = len(st.session_state.get("messages", [])) > 0
 
     with st.expander("📁 Agregar fuentes y documentos al cuaderno actual"):
@@ -914,35 +940,42 @@ if vista == "chat":
         fuentes_actuales = st.session_state.fuentes_cuadernos.get(act_cuad, [])
         st.write(f"**Fuentes activas en este cuaderno:** {', '.join(fuentes_actuales) if fuentes_actuales else 'Ninguna'}")
 
-    if not has_messages:
-        st.markdown(f"""
-            <div class="hero-empty-container">
-                <h1 class="greeting-header">¿En qué puedo ayudarte hoy, <span class="greeting-name">{user_name}</span>?</h1>
-                <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                    <span class="badge-pill-selector">⚙️ {perfil_seleccionado}</span>
-                    <span class="badge-pill-selector">🧠 {alias_display}</span>
-                    <span class="badge-pill-selector">📁 {act_cuad}</span>
-                    <span class="badge-pill-selector">🎙️ {voz_sintesis.split('(')[0].strip()}</span>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
+    # ==============================================================
+    # CONTENEDOR PRINCIPAL DE CONVERSACIÓN (Mantiene la pantalla visible y fija)
+    # ==============================================================
+    chat_container = st.container()
 
-    # Mensajes de Chat
-    for msg in st.session_state.get("messages", []):
-        with st.chat_message(msg["role"], avatar=None):
-            if msg["role"] == "user":
-                st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{msg['content']}", unsafe_allow_html=True)
-            else:
-                st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
+    with chat_container:
+        if not has_messages and not st.session_state.get("pending_message"):
+            st.markdown(f"""
+                <div class="hero-empty-container">
+                    <h1 class="greeting-header">¿En qué puedo ayudarte hoy, <span class="greeting-name">{user_name}</span>?</h1>
+                    <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                        <span class="badge-pill-selector">⚙️ {perfil_seleccionado}</span>
+                        <span class="badge-pill-selector">🧠 {alias_display}</span>
+                        <span class="badge-pill-selector">📁 {act_cuad.upper()}</span>
+                        <span class="badge-pill-selector">🎙️ {voz_sintesis.split('(')[0].strip()}</span>
+                    </div>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            for msg in st.session_state.get("messages", []):
+                with st.chat_message(msg["role"], avatar=None):
+                    if msg["role"] == "user":
+                        st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{msg['content']}", unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
+    # Captura limpia del mensaje
     def procesar_envio_mensaje():
         texto = st.session_state.input_consulta_usuario
         if texto and texto.strip():
             st.session_state["pending_message"] = texto.strip()
             st.session_state["input_consulta_usuario"] = ""
 
+    # SECCIÓN DE ENTRADA AL PIE
     col_texto, col_btn_send, col_btn_voice, col_selector = st.columns([0.70, 0.07, 0.14, 0.09])
 
     with col_texto:
@@ -1043,15 +1076,13 @@ if vista == "chat":
                 st.session_state["modelo_ia_seleccionado"] = "Opus"
                 st.rerun()
 
+    # Procesamiento del mensaje renderizándolo DENTRO del contenedor superior
     user_prompt = st.session_state.pop("pending_message", "")
     
     if user_prompt:
         prompt = user_prompt
         act_cuad_save = st.session_state.get("cuaderno_activo", "General")
         sess_id = st.session_state.get("current_session_id")
-
-        titulo_limpio = prompt.replace("\n", " ")
-        titulo_calculado = (titulo_limpio[:28] + "..") if len(titulo_limpio) > 28 else titulo_limpio
 
         es_duplicado = False
         if st.session_state.get("messages") and len(st.session_state["messages"]) > 0:
@@ -1062,20 +1093,17 @@ if vista == "chat":
         if not es_duplicado:
             crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad_save)
             guardar_mensaje_db(sess_id, "user", prompt, act_cuad_save)
-
-            if "messages" not in st.session_state:
-                st.session_state["messages"] = []
             st.session_state["messages"].append({"role": "user", "content": prompt})
 
-            with st.chat_message("user", avatar=None):
-                st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{prompt}", unsafe_allow_html=True)
-                
-            components.html("<script>window.parent.document.querySelector('.main').scrollTo(0, window.parent.document.querySelector('.main').scrollHeight);</script>", height=0)
+            with chat_container:
+                with st.chat_message("user", avatar=None):
+                    st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{prompt}", unsafe_allow_html=True)
+
+                with st.chat_message("assistant", avatar=None):
+                    st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
+                    contenedor_respuesta = st.empty()
 
             respuesta_completa = ""
-            with st.chat_message("assistant", avatar=None):
-                st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
-                contenedor_respuesta = st.empty()
 
             if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
                 client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
@@ -1086,51 +1114,21 @@ if vista == "chat":
                     f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
                 )
 
-                # Detección dinámica de modelos habilitados en la cuenta
-                modelos_cuenta = []
-                try:
-                    models_page = client.models.list(limit=50)
-                    modelos_cuenta = [m.id for m in models_page.data if hasattr(m, 'id')]
-                except Exception:
-                    pass
-
                 modelo_elegido = st.session_state.get("modelo_ia_seleccionado", "Haiku")
                 
-                # Lista de candidatos por preferencia
+                # Cascada inteligente: si Haiku devuelve 404, pasa automáticamente a Sonnet
                 if modelo_elegido == "Opus":
-                    prioridad = ["claude-3-opus-20240229", "claude-3-opus-latest"]
+                    candidatos = ["claude-3-opus-20240229", "claude-3-opus-latest", "claude-3-5-sonnet-20241022"]
                 elif modelo_elegido == "Sonnet":
-                    prioridad = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest", "claude-3-7-sonnet-20250219", "claude-3-sonnet-20240229"]
-                else:  # Haiku
-                    prioridad = ["claude-3-5-haiku-20241022", "claude-3-5-haiku-latest", "claude-3-haiku-20240307"]
-
-                # Cascada completa de contingencia
-                todos_modelos = [
-                    "claude-3-5-sonnet-20241022",
-                    "claude-3-5-sonnet-latest",
-                    "claude-3-7-sonnet-20250219",
-                    "claude-3-sonnet-20240229",
-                    "claude-3-opus-20240229",
-                    "claude-3-opus-latest",
-                    "claude-3-5-haiku-20241022",
-                    "claude-3-5-haiku-latest",
-                    "claude-3-haiku-20240307"
-                ]
-
-                # Construcción del pipeline: si la API listó modelos autorizados, los prioriza
-                candidatos = []
-                for p in prioridad:
-                    if p in modelos_cuenta and p not in candidatos:
-                        candidatos.append(p)
-                for m in modelos_cuenta:
-                    if m not in candidatos:
-                        candidatos.append(m)
-                for p in prioridad:
-                    if p not in candidatos:
-                        candidatos.append(p)
-                for t in todos_modelos:
-                    if t not in candidatos:
-                        candidatos.append(t)
+                    candidatos = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest", "claude-3-7-sonnet-20250219", "claude-3-sonnet-20240229"]
+                else:  # Haiku con fallback inmediato a Sonnet
+                    candidatos = [
+                        "claude-3-5-haiku-20241022",
+                        "claude-3-5-haiku-latest",
+                        "claude-3-haiku-20240307",
+                        "claude-3-5-sonnet-20241022",
+                        "claude-3-5-sonnet-latest"
+                    ]
 
                 exito = False
                 for mod in candidatos:
@@ -1154,14 +1152,14 @@ if vista == "chat":
                         exito = True
                         break
                     except Exception as e_mod:
-                        # Si es 404 continúa la cascada al siguiente modelo disponible
+                        # Salta al siguiente candidato si el modelo no está habilitado
                         if "404" in str(e_mod) or "not_found_error" in str(e_mod):
                             continue
                         else:
                             continue
 
                 if not exito:
-                    respuesta_completa = "Aviso de infraestructura: Los modelos solicitados no están disponibles en este momento. Verifique los permisos de su organización en Anthropic."
+                    respuesta_completa = "Aviso de infraestructura: El servicio no pudo procesar la solicitud con los modelos disponibles. Verifique los permisos de su clave en Anthropic."
                     contenedor_respuesta.markdown(respuesta_completa)
             else:
                 respuesta_completa = "⚠️ La clave de API de Anthropic no se encuentra configurada en los Secrets."
@@ -1169,9 +1167,6 @@ if vista == "chat":
 
             guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad_save)
             st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
-            
-            components.html("<script>window.parent.document.querySelector('.main').scrollTo({top: window.parent.document.querySelector('.main').scrollHeight, behavior: 'smooth'});</script>", height=0)
-            
             st.rerun()
 
 # ----------------- OTRAS VISTAS DEL SISTEMA -----------------
@@ -1195,7 +1190,7 @@ elif vista == "biblioteca":
     st.markdown('<div class="module-header-serif">BIBLIOTECA DE RECURSOS Y PLANILLAS</div>', unsafe_allow_html=True)
     st.info("Repositorio central de modelos procesales y normativas.")
 
-# VISTA DEL CUADERNO: HILOS INDEPENDIENTES CON ACCIONES COMPLETAS
+# VISTA DEL CUADERNO CON HILOS TOTALMENTE INDEPENDIENTES
 elif vista == "ver_cuaderno":
     cuaderno = st.session_state.get("active_cuaderno", "General")
     col_head_1, col_head_2 = st.columns([0.7, 0.3])
@@ -1205,6 +1200,7 @@ elif vista == "ver_cuaderno":
         if st.button("➕ Nuevo Hilo en este Cuaderno", use_container_width=True):
             st.session_state["current_session_id"] = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
             st.session_state["messages"] = []
+            st.session_state["loaded_session_id"] = st.session_state["current_session_id"]
             st.session_state["cuaderno_activo"] = cuaderno
             st.session_state["active_cuaderno"] = cuaderno
             st.session_state["active_view"] = "chat"
@@ -1230,6 +1226,7 @@ elif vista == "ver_cuaderno":
                     st.session_state["cuaderno_activo"] = cuaderno
                     st.session_state["active_cuaderno"] = cuaderno
                     st.session_state["messages"] = cargar_mensajes_sesion(s_id)
+                    st.session_state["loaded_session_id"] = s_id
                     st.session_state["active_view"] = "chat"
                     st.rerun()
             with col_h3:
@@ -1278,18 +1275,22 @@ elif vista == "todos_los_cuadernos":
             nuevo_nomb = st.text_input("Nombre del cuaderno:", key="input_nuevo_nb_p7")
             if st.button("Guardar e Ingresar", use_container_width=True):
                 if nuevo_nomb.strip():
+                    n_guardar = nuevo_nomb.strip()
                     conn = sqlite3.connect(DB_FILE)
                     c = conn.cursor()
                     try:
-                        c.execute("INSERT INTO cuadernos (nombre) VALUES (?)", (nuevo_nomb.strip(),))
+                        c.execute("INSERT INTO cuadernos (nombre) VALUES (?)", (n_guardar,))
                         conn.commit()
                     except sqlite3.IntegrityError:
                         pass
                     conn.close()
-                    if nuevo_nomb.strip() not in st.session_state.fuentes_cuadernos:
-                        st.session_state.fuentes_cuadernos[nuevo_nomb.strip()] = []
-                    st.session_state["active_cuaderno"] = nuevo_nomb.strip()
-                    st.session_state["cuaderno_activo"] = nuevo_nomb.strip()
+                    if n_guardar not in st.session_state.fuentes_cuadernos:
+                        st.session_state.fuentes_cuadernos[n_guardar] = []
+                    st.session_state["active_cuaderno"] = n_guardar
+                    st.session_state["cuaderno_activo"] = n_guardar
+                    st.session_state["current_session_id"] = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                    st.session_state["messages"] = []
+                    st.session_state["loaded_session_id"] = st.session_state["current_session_id"]
                     st.session_state["active_view"] = "ver_cuaderno"
                     st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
@@ -1303,7 +1304,7 @@ elif vista == "todos_los_cuadernos":
     conn.close()
 
     if not todos_los_cuadernos:
-        st.info("No hay cuadernos activos. Pulse '+ Nuevo cuaderno' para registrar un expediente.")
+        st.info("No hay cuadernos registrados. Pulse '+ Nuevo cuaderno' para registrar un expediente.")
     else:
         grid_cols = st.columns(3)
         for idx, (c_id, c_nom, c_fecha) in enumerate(todos_los_cuadernos):
