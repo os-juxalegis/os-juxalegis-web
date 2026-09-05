@@ -544,14 +544,16 @@ st.markdown("""
 
 # ----------------- GESTIÓN SEGURA DE API KEY ANTHROPIC -----------------
 def obtener_claude_api_key():
-    env_key = os.getenv("ANTHROPIC_API_KEY")
-    if env_key:
-        return env_key
     try:
         if "ANTHROPIC_API_KEY" in st.secrets:
-            return st.secrets["ANTHROPIC_API_KEY"]
+            val = st.secrets["ANTHROPIC_API_KEY"]
+            if val:
+                return "".join(str(val).split()).strip('"').strip("'")
     except Exception:
         pass
+    env_key = os.getenv("ANTHROPIC_API_KEY")
+    if env_key:
+        return "".join(str(env_key).split()).strip('"').strip("'")
     return None
 
 CLAUDE_API_KEY = obtener_claude_api_key()
@@ -744,7 +746,6 @@ with st.sidebar:
                 st.session_state["active_view"] = "chat"
                 st.rerun()
 
-    # Listado en tiempo real de los cuadernos en la barra lateral
     conn_sb_c = sqlite3.connect(DB_FILE)
     c_sb_c = conn_sb_c.cursor()
     c_sb_c.execute("SELECT id, nombre FROM cuadernos ORDER BY id DESC")
@@ -771,7 +772,6 @@ with st.sidebar:
 
     st.markdown("---")
     
-    # RECIENTES CONTEXTUALES: Cada cuaderno tiene exclusivamente su historial
     cuad_actual_sb = st.session_state.get("cuaderno_activo", "General")
     if cuad_actual_sb == "General":
         st.caption("RECIENTES (GENERAL)")
@@ -920,7 +920,6 @@ if vista == "chat":
     act_cuad = st.session_state.get("cuaderno_activo", "General")
     sess_id = st.session_state.get("current_session_id", "")
 
-    # Carga controlada del historial sin sobreescrituras en memoria
     if sess_id and st.session_state.get("loaded_session_id") != sess_id:
         st.session_state["messages"] = cargar_mensajes_sesion(sess_id)
         st.session_state["loaded_session_id"] = sess_id
@@ -940,9 +939,6 @@ if vista == "chat":
         fuentes_actuales = st.session_state.fuentes_cuadernos.get(act_cuad, [])
         st.write(f"**Fuentes activas en este cuaderno:** {', '.join(fuentes_actuales) if fuentes_actuales else 'Ninguna'}")
 
-    # ==============================================================
-    # CONTENEDOR PRINCIPAL DE CONVERSACIÓN (Mantiene la pantalla visible y fija)
-    # ==============================================================
     chat_container = st.container()
 
     with chat_container:
@@ -968,14 +964,12 @@ if vista == "chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # Captura limpia del mensaje
     def procesar_envio_mensaje():
         texto = st.session_state.input_consulta_usuario
         if texto and texto.strip():
             st.session_state["pending_message"] = texto.strip()
             st.session_state["input_consulta_usuario"] = ""
 
-    # SECCIÓN DE ENTRADA AL PIE
     col_texto, col_btn_send, col_btn_voice, col_selector = st.columns([0.70, 0.07, 0.14, 0.09])
 
     with col_texto:
@@ -1076,7 +1070,6 @@ if vista == "chat":
                 st.session_state["modelo_ia_seleccionado"] = "Opus"
                 st.rerun()
 
-    # Procesamiento del mensaje renderizándolo DENTRO del contenedor superior
     user_prompt = st.session_state.pop("pending_message", "")
     
     if user_prompt:
@@ -1106,7 +1099,7 @@ if vista == "chat":
             respuesta_completa = ""
 
             if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
-                client = anthropic.Anthropic(api_key=CLAUDE_API_KEY.strip())
+                client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
                 fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
                 system_prompt = (
                     f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
@@ -1114,52 +1107,92 @@ if vista == "chat":
                     f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
                 )
 
-                modelo_elegido = st.session_state.get("modelo_ia_seleccionado", "Haiku")
-                
-                # Cascada inteligente: si Haiku devuelve 404, pasa automáticamente a Sonnet
-                if modelo_elegido == "Opus":
-                    candidatos = ["claude-3-opus-20240229", "claude-3-opus-latest", "claude-3-5-sonnet-20241022"]
-                elif modelo_elegido == "Sonnet":
-                    candidatos = ["claude-3-5-sonnet-20241022", "claude-3-5-sonnet-latest", "claude-3-7-sonnet-20250219", "claude-3-sonnet-20240229"]
-                else:  # Haiku con fallback inmediato a Sonnet
-                    candidatos = [
-                        "claude-3-5-haiku-20241022",
-                        "claude-3-5-haiku-latest",
-                        "claude-3-haiku-20240307",
-                        "claude-3-5-sonnet-20241022",
-                        "claude-3-5-sonnet-latest"
-                    ]
+                # Detección dinámica de los modelos activos en la cuenta
+                modelos_autorizados = []
+                try:
+                    if hasattr(client, 'models') and hasattr(client.models, 'list'):
+                        m_list = client.models.list(limit=50)
+                        for m in m_list.data:
+                            if hasattr(m, 'id') and m.id not in modelos_autorizados:
+                                modelos_autorizados.append(m.id)
+                except Exception:
+                    pass
+
+                # Cascada integral con soporte universal para Sonnet 3.5 y 3
+                lista_universal = [
+                    "claude-3-5-sonnet-20240620",
+                    "claude-3-5-sonnet-20241022",
+                    "claude-3-5-sonnet-latest",
+                    "claude-3-7-sonnet-20250219",
+                    "claude-3-sonnet-20240229",
+                    "claude-3-opus-20240229",
+                    "claude-3-opus-latest",
+                    "claude-3-haiku-20240307",
+                    "claude-3-5-haiku-20241022",
+                    "claude-3-5-haiku-latest",
+                    "claude-2.1",
+                    "claude-instant-1.2"
+                ]
+
+                candidatos = []
+                for m in modelos_autorizados:
+                    if m not in candidatos:
+                        candidatos.append(m)
+                for m in lista_universal:
+                    if m not in candidatos:
+                        candidatos.append(m)
 
                 exito = False
+                ultimo_err = None
+
                 for mod in candidatos:
                     try:
-                        stream = client.messages.create(
-                            model=mod,
-                            max_tokens=1500,
-                            system=system_prompt,
-                            messages=[{"role": "user", "content": prompt}],
-                            stream=True
-                        )
-
-                        for event in stream:
-                            if hasattr(event, 'type') and event.type == 'content_block_delta':
-                                if hasattr(event.delta, 'text'):
-                                    chunk = event.delta.text
-                                    respuesta_completa += chunk
+                        # Intento con streaming nativo
+                        respuesta_completa = ""
+                        if hasattr(client.messages, 'stream'):
+                            with client.messages.stream(
+                                model=mod,
+                                max_tokens=1500,
+                                system=system_prompt,
+                                messages=[{"role": "user", "content": prompt}],
+                            ) as stream:
+                                for text_chunk in stream.text_stream:
+                                    respuesta_completa += text_chunk
                                     contenedor_respuesta.markdown(respuesta_completa + "▌")
+                        else:
+                            stream = client.messages.create(
+                                model=mod,
+                                max_tokens=1500,
+                                system=system_prompt,
+                                messages=[{"role": "user", "content": prompt}],
+                                stream=True
+                            )
+                            for event in stream:
+                                if hasattr(event, 'type') and event.type == 'content_block_delta':
+                                    if hasattr(event.delta, 'text'):
+                                        respuesta_completa += event.delta.text
+                                        contenedor_respuesta.markdown(respuesta_completa + "▌")
+
+                        # Resguardo directo sin streaming si no emitió texto
+                        if not respuesta_completa:
+                            resp_directa = client.messages.create(
+                                model=mod,
+                                max_tokens=1500,
+                                system=system_prompt,
+                                messages=[{"role": "user", "content": prompt}]
+                            )
+                            if resp_directa.content and len(resp_directa.content) > 0:
+                                respuesta_completa = resp_directa.content[0].text
 
                         contenedor_respuesta.markdown(respuesta_completa)
                         exito = True
                         break
                     except Exception as e_mod:
-                        # Salta al siguiente candidato si el modelo no está habilitado
-                        if "404" in str(e_mod) or "not_found_error" in str(e_mod):
-                            continue
-                        else:
-                            continue
+                        ultimo_err = e_mod
+                        continue
 
                 if not exito:
-                    respuesta_completa = "Aviso de infraestructura: El servicio no pudo procesar la solicitud con los modelos disponibles. Verifique los permisos de su clave en Anthropic."
+                    respuesta_completa = f"⚠️ Detalle de infraestructura: No fue posible establecer enlace ({str(ultimo_err)}). Verifique los permisos de su organización en Anthropic."
                     contenedor_respuesta.markdown(respuesta_completa)
             else:
                 respuesta_completa = "⚠️ La clave de API de Anthropic no se encuentra configurada en los Secrets."
