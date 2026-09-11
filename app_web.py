@@ -252,7 +252,7 @@ st.markdown("""
         box-shadow: 0 0 18px rgba(220, 164, 138, 0.45) !important;
     }
 
-    /* Popovers Popups */
+    /* Popovers / Popups estilo Gemini */
     div[data-testid="stPopoverBody"] {
         background-color: #1e1f20 !important;
         border: 1px solid #3c4043 !important;
@@ -276,7 +276,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Botón flotante '+' */
+    /* Botón circular '+' */
     .btn-plus-container div[data-testid="stPopover"] > button {
         background-color: #1e1f20 !important;
         color: #e3e3e3 !important;
@@ -555,6 +555,14 @@ if "perfil_voz" not in st.session_state:
 
 if "mensaje_a_procesar" not in st.session_state:
     st.session_state["mensaje_a_procesar"] = None
+
+# Mecanismo limpio de reseteo para evitar StreamlitWidgetAlreadyInstantiatedError
+if "caja_reset_trigger" not in st.session_state:
+    st.session_state["caja_reset_trigger"] = False
+
+if st.session_state["caja_reset_trigger"]:
+    st.session_state["input_consulta_caja"] = ""
+    st.session_state["caja_reset_trigger"] = False
 
 # ----------------- CONTROL DE ACCESO (LOGIN) -----------------
 if not st.session_state.autenticado:
@@ -911,7 +919,7 @@ if vista == "chat":
                     with st.chat_message("assistant"):
                         st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
 
-    # Componente bidireccional de voz y audio activo
+    # Componente de voz y audio activo
     ultimo_texto_asistente = ""
     for m in reversed(st.session_state.get("messages", [])):
         if m["role"] == "assistant":
@@ -921,7 +929,7 @@ if vista == "chat":
     texto_audio_seguro = ultimo_texto_asistente.replace('"', '\\"').replace('\n', ' ')
     perfil_voz_activa = st.session_state.get("perfil_voz", "hombre")
 
-    # Inyección de detector de voz y motor de habla nativo
+    # Inyección de detector de voz nativo y síntesis con permisos de micrófono
     components.html(f"""
         <!DOCTYPE html>
         <html>
@@ -931,6 +939,7 @@ if vista == "chat":
                 .btn-audio-mini {{
                     background: #1e1f20; color: #e3e3e3; border: 1px solid #3c4043; border-radius: 50%;
                     width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer;
+                    transition: all 0.2s;
                 }}
                 .btn-audio-mini:hover {{ border-color: #DCA48A; color: #DCA48A; }}
             </style>
@@ -943,38 +952,65 @@ if vista == "chat":
                 let recognition = null;
                 let grabando = false;
 
-                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    recognition = new SpeechRecognition();
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SR) {{
+                    recognition = new SR();
                     recognition.lang = 'es-AR';
                     recognition.continuous = false;
+                    recognition.interimResults = false;
 
                     recognition.onstart = function() {{
                         grabando = true;
                         const micBtn = window.parent.document.getElementById('btn-mic-main');
-                        if (micBtn) micBtn.style.backgroundColor = '#8a2424';
+                        if (micBtn) {{
+                            micBtn.style.backgroundColor = '#8a2424';
+                            micBtn.style.borderColor = '#ff5252';
+                        }}
                     }};
 
                     recognition.onend = function() {{
                         grabando = false;
                         const micBtn = window.parent.document.getElementById('btn-mic-main');
+                        if (micBtn) {{
+                            micBtn.style.backgroundColor = '#1e1f20';
+                            micBtn.style.borderColor = '#3c4043';
+                        }}
+                    }};
+
+                    recognition.onerror = function(err) {{
+                        grabando = false;
+                        const micBtn = window.parent.document.getElementById('btn-mic-main');
                         if (micBtn) micBtn.style.backgroundColor = '#1e1f20';
+                        console.error("Error micrófono:", err);
                     }};
 
                     recognition.onresult = function(e) {{
                         const transcrito = e.results[0][0].transcript;
-                        const area = window.parent.document.querySelector('textarea[data-testid="stTextArea"]');
-                        if (area) {{
-                            area.value = (area.value ? area.value + ' ' : '') + transcrito;
+                        const areas = window.parent.document.querySelectorAll('textarea');
+                        if (areas.length > 0) {{
+                            const area = areas[0];
+                            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                            const prevVal = area.value ? area.value + ' ' : '';
+                            nativeSetter.call(area, prevVal + transcrito);
                             area.dispatchEvent(new Event('input', {{ bubbles: true }}));
                         }}
                     }};
                 }}
 
                 window.parent.iniciarDictadoVozGlobal = function() {{
-                    if (!recognition) return;
-                    if (grabando) recognition.stop();
-                    else recognition.start();
+                    if (!recognition) {{
+                        alert("Reconocimiento de voz no soportado. Por favor use Chrome o Edge con permisos de micrófono.");
+                        return;
+                    }}
+                    if (grabando) {{
+                        recognition.stop();
+                    }} else {{
+                        try {{
+                            recognition.start();
+                        }} catch(e) {{
+                            recognition.stop();
+                        }}
+                    }}
                 }};
 
                 function reproducirAudio() {{
@@ -1158,7 +1194,7 @@ if vista == "chat":
             btn_enviar_click = st.button("➤", key="btn_enviar_prompt", use_container_width=True)
             if btn_enviar_click and texto_ingresado_caja.strip():
                 st.session_state["mensaje_a_procesar"] = texto_ingresado_caja.strip()
-                st.session_state["input_consulta_caja"] = ""
+                st.session_state["caja_reset_trigger"] = True
                 st.rerun()
 
     # ----------------- PROCESAMIENTO CON CLIENTE GEMINI -----------------
