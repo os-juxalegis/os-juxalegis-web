@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # JUXALEGIS OS - APP WEB COMPLETA (UNIFICADA CON BASE DE DATOS LOCAL, RUTAS Y VOZ)
-# INTEGRACIÓN REPARADA: GOOGLE GEMINI + GOOGLE SEARCH NATIVO + PERSISTENCIA TOTAL
+# INTEGRACIÓN: GOOGLE GEMINI (MODELOS ACTUALIZADOS) + SEARCH GROUNDING + FILES API
 # ------------------------------------------------------------------------------
 
 import streamlit as st
@@ -1073,14 +1073,14 @@ if vista == "chat":
         modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
         with st.popover(f"{modelo_actual} ▾", use_container_width=True):
             st.caption("Motor Neuronal")
-            if st.button("⚡ Flash (Ultra Rápido)", use_container_width=True):
+            if st.button("⚡ Flash (Rápido)", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Flash"
                 st.rerun()
             if st.button("🧠 Pro (Análisis Complejo)", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Pro"
                 st.rerun()
 
-    # Input unificado y nativo de Streamlit (elimina cuelgues de estado)
+    # Input unificado y nativo de Streamlit
     prompt_usuario = st.chat_input(f"Escriba aquí su consulta para {alias_display}...")
 
     if prompt_usuario:
@@ -1111,8 +1111,6 @@ if vista == "chat":
                     f"con las fuentes documentales: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
                 )
 
-                engine_target = "gemini-2.5-flash" if st.session_state.get("modelo_ia_seleccionado") == "Flash" else "gemini-2.5-pro"
-
                 configuracion_con_web = types.GenerateContentConfig(
                     system_instruction=system_prompt,
                     tools=[types.Tool(google_search=types.GoogleSearch())],
@@ -1125,14 +1123,33 @@ if vista == "chat":
                 else:
                     payload = prompt_usuario
 
+                # Cascada inteligente de modelos para evitar errores de deprecación
+                if st.session_state.get("modelo_ia_seleccionado") == "Pro":
+                    candidatos_gemini = ["gemini-2.5-pro", "gemini-1.5-pro", "gemini-2.0-flash"]
+                else:
+                    candidatos_gemini = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]
+
+                exito_gen = False
+                err_ultimo = None
+
                 with st.spinner(f"{alias_display} está procesando y consultando fuentes..."):
-                    # Generación robusta con búsqueda web activa
-                    response = client.models.generate_content(
-                        model=engine_target,
-                        contents=payload,
-                        config=configuracion_con_web,
-                    )
-                    respuesta_completa = response.text or "He recibido la información pero no obtuve salida de texto."
+                    for m_cand in candidatos_gemini:
+                        try:
+                            response = client.models.generate_content(
+                                model=m_cand,
+                                contents=payload,
+                                config=configuracion_con_web,
+                            )
+                            if response and response.text:
+                                respuesta_completa = response.text
+                                exito_gen = True
+                                break
+                        except Exception as e_mod_cand:
+                            err_ultimo = e_mod_cand
+                            continue
+
+                if not exito_gen:
+                    respuesta_completa = f"⚠️ Detalle de enlace con Gemini: {str(err_ultimo)}"
 
                 contenedor_respuesta.markdown(respuesta_completa)
             except Exception as e_mod:
