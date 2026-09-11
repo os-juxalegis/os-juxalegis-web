@@ -716,21 +716,33 @@ Queda terminantemente prohibido recitar o auto-presentar lo que sabes hacer (ej:
 
 # ----------------- BURBUJA DE USUARIO CON ACCIONES GARANTIZADAS -----------------
 def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name, session_id_actual):
-    clave_edicion = f"editando_{session_id_actual}_{idx_m}"
+    clave_edicion = f"ed_{session_id_actual}_{idx_m}"
     if clave_edicion not in st.session_state:
         st.session_state[clave_edicion] = False
 
-    with st.chat_message("user", avatar=None):
-        col_msg_txt, col_msg_menu = st.columns([0.92, 0.08])
+    with st.container():
+        st.markdown("""
+            <style>
+            .user-msg-box {
+                background-color: #1e2428;
+                border-left: 3px solid #DCA48A;
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-bottom: 14px;
+            }
+            </style>
+        """, unsafe_allow_html=True)
 
-        with col_msg_menu:
+        col_txt, col_opc = st.columns([0.93, 0.07])
+
+        with col_opc:
             with st.popover("⌵", help="Opciones de la consulta"):
-                if st.button("✏️ Editar", key=f"btn_edit_{session_id_actual}_{idx_m}", use_container_width=True):
+                if st.button("✏️ Editar", key=f"btn_e_{session_id_actual}_{idx_m}", use_container_width=True):
                     st.session_state[clave_edicion] = True
                     st.rerun()
 
-                if st.button("📋 Copiar", key=f"btn_cp_{session_id_actual}_{idx_m}", use_container_width=True):
-                    txt_escapado = (
+                if st.button("📋 Copiar", key=f"btn_c_{session_id_actual}_{idx_m}", use_container_width=True):
+                    txt_clean = (
                         msg_content.replace("\\", "\\\\")
                         .replace("`", "\\`")
                         .replace("$", "\\$")
@@ -741,41 +753,43 @@ def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name, sessi
                     components.html(
                         f"""
                         <script>
-                            navigator.clipboard.writeText("{txt_escapado}").then(() => {{
-                                window.parent.postMessage({{ tipo: 'COPIADO_OK' }}, '*');
-                            }});
+                            navigator.clipboard.writeText("{txt_clean}");
                         </script>
                         """,
                         height=0,
                         width=0
                     )
-                    st.toast("Instrucción copiada al portapapeles", icon="📋")
+                    st.toast("Consulta copiada al portapapeles.", icon="📋")
 
-        with col_msg_txt:
+        with col_txt:
             if st.session_state[clave_edicion]:
-                nuevo_texto_editado = st.text_area(
-                    "Modificar y reenviar consulta:",
+                nuevo_txt = st.text_area(
+                    "Modificar y reenviar:",
                     value=msg_content,
-                    key=f"ta_edit_box_{session_id_actual}_{idx_m}",
-                    height=110
+                    key=f"box_e_{session_id_actual}_{idx_m}",
+                    height=100
                 )
-                col_g, col_c = st.columns([0.28, 0.72])
-                with col_g:
-                    if st.button("Reenviar", key=f"btn_sub_{session_id_actual}_{idx_m}"):
-                        if nuevo_texto_editado.strip():
+                cg, cc = st.columns([0.25, 0.75])
+                with cg:
+                    if st.button("Reenviar", key=f"ok_e_{session_id_actual}_{idx_m}"):
+                        if nuevo_txt.strip():
                             st.session_state[clave_edicion] = False
-                            st.session_state["mensaje_a_procesar"] = nuevo_texto_editado.strip()
+                            st.session_state["mensaje_a_procesar"] = nuevo_txt.strip()
                             st.rerun()
-                with col_c:
-                    if st.button("Cancelar", key=f"btn_canc_{session_id_actual}_{idx_m}"):
+                with cc:
+                    if st.button("Cancelar", key=f"no_e_{session_id_actual}_{idx_m}"):
                         st.session_state[clave_edicion] = False
                         st.rerun()
             else:
                 st.markdown(
                     f"""
-                    <div style="line-height: 1.5; margin-bottom: 2px;">
-                        <span style="color: #DCA48A; font-weight: 800; letter-spacing: 0.5px; font-size: 0.95rem;">{user_name}:</span>
-                        <div style="color: #FFF9E6; margin-top: 5px; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word;">{msg_content}</div>
+                    <div class="user-msg-box">
+                        <div style="color: #DCA48A; font-weight: 800; font-size: 0.92rem; letter-spacing: 0.5px; margin-bottom: 4px;">
+                            {user_name}:
+                        </div>
+                        <div style="color: #FFF9E6; font-size: 0.95rem; line-height: 1.5; white-space: pre-wrap; word-break: break-word;">
+                            {msg_content}
+                        </div>
                     </div>
                     """,
                     unsafe_allow_html=True
@@ -841,16 +855,14 @@ def extraer_parte_imagen_para_gemini():
         return parte_multimodal
     return None
 
-# ----------------- SÍNTESIS DE VOZ NATURAL (TTS DINÁMICO Y FLUIDO) -----------------
+# ----------------- SÍNTESIS DE VOZ NATURAL (DISEÑO ORIGINAL 🔊 + VELOCIDAD RÁPIDA) -----------------
 def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_activa):
     if not ultimo_texto_asistente or not ultimo_texto_asistente.strip():
         return
 
-    # Limpieza profunda: se eliminan pausas muertas, asteriscos, guiones largos y saltos
     t_limpio = re.sub(r'[\*\_#`\[\]\(\)>~]', ' ', ultimo_texto_asistente)
     t_limpio = re.sub(r'https?://\S+', ' ', t_limpio)
     t_limpio = re.sub(r'[—–-]', ' ', t_limpio)
-    t_limpio = re.sub(r'\.{2,}', '.', t_limpio)
     t_limpio = re.sub(r'\s+', ' ', t_limpio).strip()
 
     t_js_seguro = (
@@ -874,143 +886,126 @@ def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_acti
                     background: transparent;
                     display: flex;
                     align-items: center;
-                    gap: 10px;
-                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
                 }}
-                .btn-audio-dock {{
+                .btn-audio-mini {{
                     background: #1e1f20;
-                    color: #E1E6EB;
+                    color: #e3e3e3;
                     border: 1px solid #3c4043;
                     border-radius: 50%;
-                    width: 38px;
-                    height: 38px;
+                    width: 36px;
+                    height: 36px;
                     display: flex;
                     align-items: center;
                     justify-content: center;
                     cursor: pointer;
-                    font-size: 17px;
                     transition: all 0.2s ease-in-out;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
                 }}
-                .btn-audio-dock:hover {{
+                .btn-audio-mini:hover {{
                     border-color: #DCA48A;
                     color: #DCA48A;
-                    transform: scale(1.05);
-                }}
-                .estado-reproduccion {{
-                    font-size: 11px;
-                    color: #8A99A8;
-                    font-weight: 600;
-                    letter-spacing: 0.3px;
                 }}
             </style>
         </head>
         <body>
-            <button class="btn-audio-dock" id="btn-reproducir-tts" title="Escuchar locución fluida" onclick="gestionarReproduccionVocal()">
+            <button class="btn-audio-mini" title="Escuchar respuesta" onclick="reproducirAudioFluido()">
                 🔊
             </button>
-            <span id="label-estado-tts" class="estado-reproduccion"></span>
 
             <script>
                 let synth = window.speechSynthesis;
                 let textoCompleto = "{t_js_seguro}";
                 let perfilObjetivo = "{perfil_voz_activa}";
                 let listaVoces = [];
+                let oraciones = [];
+                let indiceActual = 0;
+                let reproduciendo = false;
 
-                function cargarVocesDisponibles() {{
+                function cargarVoces() {{
                     if (!('speechSynthesis' in window)) return;
                     listaVoces = synth.getVoices();
                 }}
-
-                cargarVocesDisponibles();
+                cargarVoces();
                 if ('speechSynthesis' in window) {{
-                    window.speechSynthesis.onvoiceschanged = cargarVocesDisponibles;
+                    window.speechSynthesis.onvoiceschanged = cargarVoces;
                 }}
 
-                function seleccionarMejorVoz(perfil) {{
-                    if (!listaVoces || listaVoces.length === 0) {{
-                        cargarVocesDisponibles();
-                    }}
+                function obtenerVoz(perfil) {{
+                    if (!listaVoces || listaVoces.length === 0) cargarVoces();
+                    let vocesEs = listaVoces.filter(v => v.lang.toLowerCase().startsWith('es'));
+                    if (vocesEs.length === 0) return listaVoces[0] || null;
 
-                    let vocesEspanol = listaVoces.filter(v => v.lang.toLowerCase().startsWith('es'));
-                    if (vocesEspanol.length === 0) return listaVoces[0] || null;
-
-                    let seleccion = null;
+                    let sel = null;
                     if (perfil === "mujer") {{
-                        seleccion = vocesEspanol.find(v => 
+                        sel = vocesEs.find(v => 
                             (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online') || v.name.toLowerCase().includes('google')) &&
-                            (v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('sabina') || v.name.toLowerCase().includes('paulina') || v.name.toLowerCase().includes('monica') || v.name.toLowerCase().includes('female'))
+                            (v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('sabina') || v.name.toLowerCase().includes('paulina') || v.name.toLowerCase().includes('female'))
                         );
-                        if (!seleccion) {{
-                            seleccion = vocesEspanol.find(v => 
-                                v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('sabina') || v.name.toLowerCase().includes('paulina') || v.name.toLowerCase().includes('female')
-                            );
-                        }}
-                        if (!seleccion) {{
-                            seleccion = vocesEspanol.find(v => v.name.toLowerCase().includes('google español') || v.lang.includes('AR'));
-                        }}
+                        if (!sel) sel = vocesEs.find(v => v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('female'));
+                        if (!sel) sel = vocesEs.find(v => v.name.toLowerCase().includes('google español') || v.lang.includes('AR'));
                     }} else {{
-                        seleccion = vocesEspanol.find(v => 
+                        sel = vocesEs.find(v => 
                             (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online')) &&
-                            (v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('jorge') || v.name.toLowerCase().includes('male'))
+                            (v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('male'))
                         );
-                        if (!seleccion) {{
-                            seleccion = vocesEspanol.find(v => 
-                                v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('male')
-                            );
-                        }}
+                        if (!sel) sel = vocesEs.find(v => v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('male'));
                     }}
-                    return seleccion || vocesEspanol[0];
+                    return sel || vocesEs[0];
                 }}
 
-                function gestionarReproduccionVocal() {{
+                function hablarSiguiente() {{
+                    if (!reproduciendo || indiceActual >= oraciones.length) {{
+                        reproduciendo = false;
+                        return;
+                    }}
+
+                    let fragmento = oraciones[indiceActual].trim();
+                    if (!fragmento) {{
+                        indiceActual++;
+                        hablarSiguiente();
+                        return;
+                    }}
+
+                    let loc = new SpeechSynthesisUtterance(fragmento);
+                    let vTarget = obtenerVoz(perfilObjetivo);
+                    if (vTarget) {{
+                        loc.voice = vTarget;
+                        loc.lang = vTarget.lang;
+                    }} else {{
+                        loc.lang = 'es-AR';
+                    }}
+
+                    loc.rate = 1.25;
+                    loc.pitch = perfilObjetivo === "mujer" ? 1.05 : 1.0;
+
+                    loc.onend = function() {{
+                        indiceActual++;
+                        hablarSiguiente();
+                    }};
+                    loc.onerror = function() {{
+                        indiceActual++;
+                        hablarSiguiente();
+                    }};
+
+                    synth.speak(loc);
+                }}
+
+                function reproducirAudioFluido() {{
                     if (!('speechSynthesis' in window)) return;
 
-                    let btn = document.getElementById('btn-reproducir-tts');
-                    let lbl = document.getElementById('label-estado-tts');
-
-                    if (synth.speaking) {{
+                    if (reproduciendo || synth.speaking) {{
+                        reproduciendo = false;
                         synth.cancel();
-                        btn.innerText = '🔊';
-                        lbl.innerText = '';
                         return;
                     }}
 
                     if (!textoCompleto.trim()) return;
 
                     synth.cancel();
+                    oraciones = textoCompleto.match(/[^.!?]+[.!?]+|[^.!?]+$/g) || [textoCompleto];
+                    indiceActual = 0;
+                    reproduciendo = true;
 
-                    let locucion = new SpeechSynthesisUtterance(textoCompleto);
-                    let vozOptima = seleccionarMejorVoz(perfilObjetivo);
-
-                    if (vozOptima) {{
-                        locucion.voice = vozOptima;
-                        locucion.lang = vozOptima.lang;
-                    }} else {{
-                        locucion.lang = 'es-AR';
-                    }}
-
-                    // Cadencia ágil: ritmo dinámico y sin arrastre
-                    locucion.rate = 1.25;
-                    locucion.pitch = perfilObjetivo === "mujer" ? 1.05 : 1.02;
-
-                    locucion.onstart = function() {{
-                        btn.innerText = '⏹️';
-                        lbl.innerText = 'Hablando...';
-                    }};
-
-                    locucion.onend = function() {{
-                        btn.innerText = '🔊';
-                        lbl.innerText = '';
-                    }};
-
-                    locucion.onerror = function(err) {{
-                        console.error("Error TTS:", err);
-                        btn.innerText = '🔊';
-                        lbl.innerText = '';
-                    }};
-
-                    synth.speak(locucion);
+                    hablarSiguiente();
                 }}
             </script>
         </body>
@@ -1065,7 +1060,7 @@ def renderizar_motor_microfono_directo():
             }
             @keyframes pulso-mic {
                 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
-                70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); }
+                70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255, 82, 82, 0.7); }
                 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
             }
         </style>
@@ -1771,8 +1766,8 @@ if vista == "chat":
 
     with st.expander("📁 Agregar fuentes, libros y expedientes al cuaderno actual"):
         archivo_subido = st.file_uploader(
-            "Cargar documentos (PDF extensos, Tratados, Causa completa, TXT):", 
-            type=["png", "jpg", "jpeg", "pdf", "txt", "wav", "mp3"]
+            "Cargar documentos (PDF extensos, Tratados, Causa completa, TXT, Audios WhatsApp):", 
+            type=["png", "jpg", "jpeg", "pdf", "txt", "wav", "mp3", "ogg", "opus", "m4a"]
         )
         if archivo_subido:
             nombre_archivo = archivo_subido.name
@@ -1897,7 +1892,7 @@ if vista == "chat":
         st.session_state["captura_uploader_ver"] += 1
         st.rerun()
 
-    # Síntesis TTS dinámica y fluida
+    # Síntesis TTS dinámica y fluida (Diseño original sobrio 🔊)
     ultimo_texto_asistente = ""
     for m in reversed(st.session_state.get("messages", [])):
         if m["role"] == "assistant":
