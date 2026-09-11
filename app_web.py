@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # JUXALEGIS OS - APP WEB COMPLETA (UNIFICADA CON BASE DE DATOS LOCAL, RUTAS Y VOZ)
-# INTEGRACIÓN: GOOGLE GEMINI (MODELOS ACTUALIZADOS) + SEARCH GROUNDING + FILES API
+# INTEGRACIÓN OFICIAL: GOOGLE GEMINI 3.6-FLASH / 3.8-FLASH / 3.1-PRO + SEARCH GROUNDING
 # ------------------------------------------------------------------------------
 
 import streamlit as st
@@ -1073,10 +1073,10 @@ if vista == "chat":
         modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
         with st.popover(f"{modelo_actual} ▾", use_container_width=True):
             st.caption("Motor Neuronal")
-            if st.button("⚡ Flash (Rápido)", use_container_width=True):
+            if st.button("⚡ Flash (3.6 / 3.8)", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Flash"
                 st.rerun()
-            if st.button("🧠 Pro (Análisis Complejo)", use_container_width=True):
+            if st.button("🧠 Pro (3.1 Pro)", use_container_width=True):
                 st.session_state["modelo_ia_seleccionado"] = "Pro"
                 st.rerun()
 
@@ -1123,11 +1123,11 @@ if vista == "chat":
                 else:
                     payload = prompt_usuario
 
-                # Cascada inteligente de modelos para evitar errores de deprecación
+                # Cascada oficial con las versiones exactas solicitadas
                 if st.session_state.get("modelo_ia_seleccionado") == "Pro":
-                    candidatos_gemini = ["gemini-2.5-pro", "gemini-1.5-pro", "gemini-2.0-flash"]
+                    candidatos_gemini = ["gemini-3.1-pro", "gemini-2.5-pro"]
                 else:
-                    candidatos_gemini = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-flash"]
+                    candidatos_gemini = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-2.5-flash"]
 
                 exito_gen = False
                 err_ultimo = None
