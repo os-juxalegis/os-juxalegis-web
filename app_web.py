@@ -5,6 +5,7 @@
 
 import os
 import io
+import re
 import time
 import base64
 import sqlite3
@@ -130,6 +131,33 @@ def cargar_mensajes_sesion(session_id):
     conn.close()
     return [{"role": r[0], "content": r[1]} for r in filas]
 
+def obtener_nombre_ia_usuario(email: str) -> str:
+    if not email:
+        return "CHRONN"
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT nombre_ia FROM preferencias_usuario WHERE email = ?", (email.lower().strip(),))
+    res = c.fetchone()
+    conn.close()
+    if res and res[0] and res[0].strip():
+        return res[0].strip()
+    return "CHRONN"
+
+def guardar_nombre_ia_usuario(email: str, nombre_ia: str):
+    if not email:
+        return
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO preferencias_usuario (email, modo_operativo, nombre_ia, ultima_modificacion)
+        VALUES (?, 'Asistente Integral', ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(email) DO UPDATE SET
+            nombre_ia = excluded.nombre_ia,
+            ultima_modificacion = CURRENT_TIMESTAMP
+    """, (email.lower().strip(), nombre_ia.strip()))
+    conn.commit()
+    conn.close()
+
 # ----------------- DIRECTRICES MAESTRAS: MODO ASISTENTE INTEGRAL -----------------
 SYSTEM_INSTRUCTION_JUXALEGIS = """
 INSTRUCTIVO DE CONFIGURACIÓN INTEGRAL DE SISTEMA (SYSTEM PROMPT / DIRECTRICES MAESTRAS)
@@ -209,6 +237,25 @@ st.markdown("""
         color: #DCA48A !important;
         font-family: 'Cinzel', serif !important;
         letter-spacing: 1px;
+    }
+
+    /* ELIMINACIÓN TOTAL Y ESTRICTA DE AVATARES, PERSONITAS Y ROBOTS EN CHAT */
+    [data-testid="stChatMessageAvatarUser"],
+    [data-testid="stChatMessageAvatarAssistant"],
+    [data-testid="stChatMessage"] div:first-child:has(svg),
+    [data-testid="stChatMessage"] div:first-child:has(img),
+    [data-testid="stChatMessage"] div:first-child:has([data-testid="stIconMaterial"]),
+    [data-testid="stChatMessage"] > div:first-child:not(:only-child) {
+        display: none !important;
+        width: 0 !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    div[data-testid="stChatMessage"] {
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+        gap: 0 !important;
     }
 
     /* Botón general */
@@ -547,14 +594,15 @@ if "modelo_ia_seleccionado" not in st.session_state:
 if "audio_text_to_speak" not in st.session_state:
     st.session_state.audio_text_to_speak = ""
 
-if "captura_portapapeles" not in st.session_state:
-    st.session_state["captura_portapapeles"] = None
-
 if "perfil_voz" not in st.session_state:
     st.session_state["perfil_voz"] = "hombre"
 
 if "mensaje_a_procesar" not in st.session_state:
     st.session_state["mensaje_a_procesar"] = None
+
+# Contador de versión para reiniciar el uploader limpiamente sin errores de widget
+if "captura_uploader_ver" not in st.session_state:
+    st.session_state["captura_uploader_ver"] = 0
 
 # Mecanismo limpio de reseteo para evitar StreamlitWidgetAlreadyInstantiatedError
 if "caja_reset_trigger" not in st.session_state:
@@ -633,7 +681,7 @@ with st.sidebar:
         st.session_state["messages"] = []
         st.session_state["loaded_session_id"] = st.session_state["current_session_id"]
         st.session_state.audio_text_to_speak = ""
-        st.session_state["captura_portapapeles"] = None
+        st.session_state["captura_uploader_ver"] += 1
         st.rerun()
 
     if st.button("🔍 Buscar chats", use_container_width=True):
@@ -775,16 +823,26 @@ with st.sidebar:
     st.markdown("---")
     st.markdown('<div class="sidebar-config-header" style="font-family: Cinzel, serif; color: #DCA48A; font-weight: 700; margin-bottom: 8px;">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
 
-    # Modo Operativo Único: Asistente Integral
+    # Modo Operativo Único: Tarjeta limpia y sobria sin texto secundario
     st.markdown("""
         <div style="background-color: #1e1f20; border: 1px solid #3c4043; border-left: 3px solid #DCA48A; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
             <div style="font-size: 11px; color: #a8a8a8; text-transform: uppercase; letter-spacing: 0.8px;">Modo Operativo Activo</div>
-            <div style="font-size: 14px; font-weight: 600; color: #DCA48A;">Asistente Integral</div>
-            <div style="font-size: 11px; color: #7a7a7a; margin-top: 4px;">Tríada: Legal Córdoba/Federal · Asistente Universal · Código / IA</div>
+            <div style="font-size: 14px; font-weight: 600; color: #DCA48A; margin-top: 2px;">Asistente Integral</div>
         </div>
     """, unsafe_allow_html=True)
 
-    alias_ia = st.sidebar.text_input("Identidad IA:", value="CHRONN")
+    # Identidad IA: Persistencia individual y exacta por usuario en SQLite
+    nombre_ia_guardado = obtener_nombre_ia_usuario(st.session_state.usuario_email)
+    alias_ia_input = st.sidebar.text_input(
+        "Identidad IA:", 
+        value=nombre_ia_guardado, 
+        key="campo_identidad_ia_usuario"
+    )
+    if alias_ia_input.strip() and alias_ia_input.strip() != nombre_ia_guardado:
+        guardar_nombre_ia_usuario(st.session_state.usuario_email, alias_ia_input.strip())
+        alias_ia = alias_ia_input.strip()
+    else:
+        alias_ia = nombre_ia_guardado
 
     # Selector oficial de Voces
     opciones_voces_menu = [
@@ -794,9 +852,13 @@ with st.sidebar:
     voz_sel = st.sidebar.selectbox("Síntesis de voz:", options=opciones_voces_menu, index=0)
     st.session_state["perfil_voz"] = "hombre" if "Hombre" in voz_sel else "mujer"
 
+    # Generación limpia de iniciales del usuario
+    partes_correo = st.session_state.usuario_email.split('@')[0].split('.')
+    iniciales = "".join([p[0].upper() for p in partes_correo[:2]]) if partes_correo else "US"
+
     st.sidebar.markdown(f"""
         <div class="user-footer">
-            <div class="user-avatar">NM</div>
+            <div class="user-avatar">{iniciales}</div>
             <div>
                 <strong style="font-size: 0.9rem; color: #fff;">{st.session_state.usuario_email}</strong><br>
                 <span style="font-size: 0.75rem; color: #DCA48A; font-weight: bold;">PRO / AUTORIZADO</span>
@@ -888,7 +950,7 @@ if vista == "chat":
                     if clave_ed not in st.session_state:
                         st.session_state[clave_ed] = False
 
-                    with st.chat_message("user"):
+                    with st.chat_message("user", avatar=None):
                         col_msg_txt, col_msg_menu = st.columns([0.94, 0.06])
                         with col_msg_menu:
                             with st.popover("⌵", help="Opciones"):
@@ -916,20 +978,22 @@ if vista == "chat":
                             else:
                                 st.markdown(f"<span style='color: #DCA48A; font-weight: 800;'>{user_name}:</span><br>{msg['content']}", unsafe_allow_html=True)
                 else:
-                    with st.chat_message("assistant"):
+                    with st.chat_message("assistant", avatar=None):
                         st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
 
-    # Componente de voz y audio activo
+    # Componente de voz y audio activo con limpieza de caracteres
     ultimo_texto_asistente = ""
     for m in reversed(st.session_state.get("messages", [])):
         if m["role"] == "assistant":
             ultimo_texto_asistente = m["content"]
             break
 
-    texto_audio_seguro = ultimo_texto_asistente.replace('"', '\\"').replace('\n', ' ')
+    # Sanitización profunda de Markdown para una lectura fluida y natural
+    texto_limpio_audio = re.sub(r'[*#_`\[\]()>-]', '', ultimo_texto_asistente)
+    texto_audio_seguro = texto_limpio_audio.replace('"', '\\"').replace('\n', ' ')
     perfil_voz_activa = st.session_state.get("perfil_voz", "hombre")
 
-    # Inyección de detector de voz nativo y síntesis con permisos de micrófono
+    # Inyección directa de micrófono y síntesis neuronal sin pausas artificiales
     components.html(f"""
         <!DOCTYPE html>
         <html>
@@ -945,7 +1009,7 @@ if vista == "chat":
             </style>
         </head>
         <body>
-            <button class="btn-audio-mini" title="Escuchar última respuesta" onclick="reproducirAudio()">🔊</button>
+            <button class="btn-audio-mini" title="Escuchar respuesta con cadencia natural" onclick="reproducirAudioFluido()">🔊</button>
             <span id="st-audio" style="font-size: 12px; color: #8A99A8;"></span>
 
             <script>
@@ -981,7 +1045,7 @@ if vista == "chat":
                         grabando = false;
                         const micBtn = window.parent.document.getElementById('btn-mic-main');
                         if (micBtn) micBtn.style.backgroundColor = '#1e1f20';
-                        console.error("Error micrófono:", err);
+                        console.error("Error microfono:", err);
                     }};
 
                     recognition.onresult = function(e) {{
@@ -999,7 +1063,7 @@ if vista == "chat":
 
                 window.parent.iniciarDictadoVozGlobal = function() {{
                     if (!recognition) {{
-                        alert("Reconocimiento de voz no soportado. Por favor use Chrome o Edge con permisos de micrófono.");
+                        alert("Reconocimiento de voz no disponible o permisos bloqueados en su navegador. Use Chrome/Edge y permita el micrófono.");
                         return;
                     }}
                     if (grabando) {{
@@ -1013,7 +1077,7 @@ if vista == "chat":
                     }}
                 }};
 
-                function reproducirAudio() {{
+                function reproducirAudioFluido() {{
                     if (!('speechSynthesis' in window)) return;
                     if (window.speechSynthesis.speaking) {{
                         window.speechSynthesis.cancel();
@@ -1024,19 +1088,28 @@ if vista == "chat":
 
                     const utter = new SpeechSynthesisUtterance(txt);
                     utter.lang = 'es-AR';
+                    utter.rate = 1.12; // Velocidad de habla natural y dinámica
+                    utter.pitch = 1.0;
+
                     const voces = window.speechSynthesis.getVoices();
                     const perfil = "{perfil_voz_activa}";
 
                     let vTarget = null;
                     if (perfil === "hombre") {{
-                        vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('male')));
-                        utter.pitch = 0.9;
+                        // Búsqueda prioritaria de voces neuronales o masculinas naturales
+                        vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('male')));
                     }} else {{
-                        vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('female')));
-                        utter.pitch = 1.1;
+                        // Búsqueda prioritaria de voces femeninas naturales
+                        vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('female')));
                     }}
                     if (vTarget) utter.voice = vTarget;
                     window.speechSynthesis.speak(utter);
+                }}
+
+                if ('speechSynthesis' in window) {{
+                    window.speechSynthesis.onvoiceschanged = function() {{
+                        window.speechSynthesis.getVoices();
+                    }};
                 }}
             </script>
         </body>
@@ -1066,11 +1139,12 @@ if vista == "chat":
         </script>
     """, height=0, width=0)
 
-    # Previsualizador de captura activa
+    # Previsualizador de captura activa utilizando clave dinámica versionada
+    uploader_ver = st.session_state["captura_uploader_ver"]
     captura_archivo_manual = st.file_uploader(
         "Cargar captura opcional", 
         type=["png", "jpg", "jpeg", "webp"], 
-        key="uploader_captura_pantalla",
+        key=f"uploader_captura_pantalla_v_{uploader_ver}",
         label_visibility="collapsed"
     )
     img_captura_activa = None
@@ -1081,7 +1155,7 @@ if vista == "chat":
             st.image(img_captura_activa, caption="📸 Captura lista para lectura pericial", width=250)
         with col_c2:
             if st.button("✕ Quitar captura"):
-                st.session_state["uploader_captura_pantalla"] = None
+                st.session_state["captura_uploader_ver"] += 1
                 st.rerun()
 
     # Modal interactivo si se activó imagen o video desde el botón '+'
@@ -1155,7 +1229,7 @@ if vista == "chat":
                 if st.button("📚 Aprendizaje guiado", key="btn_aprendizaje", use_container_width=True):
                     st.toast("Modo doctrina asistida activado.")
                 if st.button("🧠 Inteligencia personalizada", key="btn_ia_custom", use_container_width=True):
-                    st.toast("Directivas de Córdoba calibradas.")
+                    st.toast("Directivas calibradas.")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_input:
@@ -1210,9 +1284,9 @@ if vista == "chat":
         st.session_state["messages"].append({"role": "user", "content": prompt_actual})
 
         with chat_container:
-            with st.chat_message("user"):
+            with st.chat_message("user", avatar=None):
                 st.markdown(f"<span style='color: #DCA48A; font-weight: 800;'>{user_name}:</span><br>{prompt_actual}", unsafe_allow_html=True)
-            with st.chat_message("assistant"):
+            with st.chat_message("assistant", avatar=None):
                 st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
                 contenedor_res = st.empty()
 
@@ -1292,7 +1366,8 @@ if vista == "chat":
 
         guardar_mensaje_db(sess_id, "assistant", respuesta_final, act_cuad_save)
         st.session_state["messages"].append({"role": "assistant", "content": respuesta_final})
-        st.session_state["uploader_captura_pantalla"] = None
+        # Incrementa la versión para limpiar el uploader sin mutar widgets instanciados
+        st.session_state["captura_uploader_ver"] += 1
         st.rerun()
 
 # ----------------- OTRAS VISTAS DEL SISTEMA -----------------
