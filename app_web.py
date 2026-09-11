@@ -1,8 +1,8 @@
 # ------------------------------------------------------------------------------
-# JUXALEGIS OS — OPERATING SYSTEM (PRODUCCIÓN DEFINITIVA INTEGRAL)
+# JUXALEGIS OS — OPERATING SYSTEM (PRODUCCIÓN DEFINITIVA INTEGRAL CORREGIDA)
 # ARQUITECTURA: PYTHON + STREAMLIT + SQLITE (juxalegis_os.db)
-# INTEGRACIÓN OFICIAL: SDK GOOGLE-GENAI (GEMINI FLASH / PRO + GROUNDING + VISON)
-# CONSOLIDACIÓN DE PARCHES MODULARES 1 AL 16 INTEGRADOS AL 100%
+# INTEGRACIÓN OFICIAL: SDK GOOGLE-GENAI (GEMINI FLASH / PRO + GROUNDING + VISION)
+# CORRECCIÓN INTEGRAL: PERSISTENCIA TOTAL DE MENSAJES Y ACCIONES DE USUARIO
 # ------------------------------------------------------------------------------
 
 import os
@@ -164,7 +164,6 @@ def guardar_nombre_ia_usuario(email: str, nombre_ia: str):
     conn.commit()
     conn.close()
 
-# Parche 10: Vinculación de hilos a cuadernos
 def mover_hilo_a_cuaderno_db(session_id: str, nombre_cuaderno_destino: str):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -244,7 +243,7 @@ Auditoría y refactorización:
 Diagnóstico de errores sintácticos o de lógica, resolución de dependencias, auditoría de vulnerabilidades y optimización de rendimiento de aplicaciones y plataformas web.
 """
 
-# ----------------- ESTILOS GLOBALES, IDENTIDAD & PARCHE 16 -----------------
+# ----------------- ESTILOS GLOBALES, IDENTIDAD & TIPOGRAFÍAS -----------------
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
@@ -274,7 +273,7 @@ st.markdown("""
         letter-spacing: 1px;
     }
 
-    /* ELIMINACIÓN TOTAL Y ESTRICTA DE AVATARES, PERSONITAS Y ROBOTS EN CHAT */
+    /* SUPRESIÓN TOTAL Y ESTRICTA DE AVATARES */
     [data-testid="stChatMessageAvatarUser"],
     [data-testid="stChatMessageAvatarAssistant"],
     [data-testid="stChatMessage"] div:first-child:has(svg),
@@ -308,7 +307,7 @@ st.markdown("""
         border-color: #DCA48A !important;
     }
 
-    /* Parche 9: Botón Iniciar Sesión con Hover Rosa Oro */
+    /* Botón Iniciar Sesión con Hover Rosa Oro */
     div[data-testid="stForm"] button,
     .stButton > button[kind="primary"] {
         background-color: #161b1e !important;
@@ -334,7 +333,7 @@ st.markdown("""
         box-shadow: 0 0 18px rgba(220, 164, 138, 0.45) !important;
     }
 
-    /* Popovers / Popups estilo Gemini */
+    /* Popovers estilo sistema */
     div[data-testid="stPopoverBody"] {
         background-color: #1e1f20 !important;
         border: 1px solid #3c4043 !important;
@@ -422,7 +421,6 @@ st.markdown("""
         transform: scale(1.05);
     }
 
-    /* Selectbox de Motor Neural */
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         border-radius: 14px !important;
         background-color: #1e1f20 !important;
@@ -512,12 +510,12 @@ st.markdown("""
         text-transform: uppercase !important;
     }
 
-    /* PARCHE 16 DEFINITIVO: TIPOGRAFÍA TIMES NEW ROMAN Y FORMATO ORACIÓN */
+    /* ESTILOS TIMES NEW ROMAN (SALUDO Y SIDEBAR) */
     .saludo-bienvenida-times {
         font-family: 'Times New Roman', Times, Georgia, serif !important;
         font-size: 2.35rem !important;
         font-weight: 400 !important;
-        color: #FFF9E6 !important; /* Blanco oficial institucional */
+        color: #FFF9E6 !important;
         letter-spacing: 0.2px !important;
         margin: 0 !important;
         line-height: 1.3 !important;
@@ -624,7 +622,6 @@ def generar_video_institucional(client, prompt_guion):
         st.error(f"Inconveniente en generación audiovisual: {error}")
         return None
 
-# ----------------- FUNCIONES DE FORMATO Y SALUDO (PARCHE 16) -----------------
 def formatear_nombre_tipo_oracion(nombre_raw: str) -> str:
     nom = nombre_raw.strip().upper()
     if "MARTIN" in nom:
@@ -651,7 +648,7 @@ def renderizar_bienvenida_calibrada(user_name_raw, alias_display, act_cuad, perf
         </div>
     """, unsafe_allow_html=True)
 
-# ----------------- PARCHE 15: MENSAJES DE USUARIO RESTAURADOS -----------------
+# ----------------- BURBUJA DE USUARIO CON ACCIONES GARANTIZADAS -----------------
 def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
     clave_edicion = f"editando_msg_{idx_m}"
     if clave_edicion not in st.session_state:
@@ -659,12 +656,13 @@ def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
 
     with st.chat_message("user", avatar=None):
         col_msg_txt, col_msg_menu = st.columns([0.93, 0.07])
+        
         with col_msg_menu:
-            with st.popover("⌵", help="Opciones de la consulta"):
-                if st.button("✏️ Editar instrucción", key=f"btn_edit_user_{idx_m}", use_container_width=True):
+            with st.popover("⌵", help="Opciones"):
+                if st.button("✏️ Editar", key=f"btn_edit_user_{idx_m}", use_container_width=True):
                     st.session_state[clave_edicion] = True
                     st.rerun()
-                if st.button("📋 Copiar instrucción", key=f"btn_copy_user_{idx_m}", use_container_width=True):
+                if st.button("📋 Copiar", key=f"btn_copy_user_{idx_m}", use_container_width=True):
                     txt_escapado = msg_content.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$")
                     components.html(
                         f"""
@@ -702,7 +700,7 @@ def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
                     unsafe_allow_html=True
                 )
 
-# ----------------- PARCHE 10: MENÚ CONTEXTUAL DE HILOS RECIENTES -----------------
+# ----------------- MENÚ CONTEXTUAL DE HILOS RECIENTES -----------------
 def renderizar_menu_opciones_hilo_reciente(s_id, titulo_mostrar, cuaderno_actual_hilo):
     with st.popover("···", use_container_width=True):
         st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase; margin-bottom: 6px;'>Opciones de Hilo</p>", unsafe_allow_html=True)
@@ -780,7 +778,7 @@ def renderizar_menu_opciones_hilo_reciente(s_id, titulo_mostrar, cuaderno_actual
                 st.session_state["loaded_session_id"] = None
             st.rerun()
 
-# ----------------- PARCHE 14: GESTIÓN DE HILOS EN VISTA DEL CUADERNO -----------------
+# ----------------- GESTIÓN DE HILOS EN VISTA DEL CUADERNO -----------------
 def renderizar_hilos_expediente_con_acciones(cuaderno_activo):
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -855,7 +853,7 @@ def renderizar_hilos_expediente_con_acciones(cuaderno_activo):
                     st.toast("Conversación eliminada del expediente.", icon="🗑️")
                     st.rerun()
 
-# ----------------- PARCHE 11: BIBLIOTECA DINÁMICA Y PLANILLAS -----------------
+# ----------------- BIBLIOTECA DINÁMICA Y PLANILLAS -----------------
 def renderizar_vista_biblioteca_dinamica():
     st.markdown('<div class="module-header-serif">BIBLIOTECA DE RECURSOS Y PLANTILLAS</div>', unsafe_allow_html=True)
     tab_subir, tab_consultar = st.tabs(["📤 Cargar recurso / plantilla", "📂 Plantillas resguardadas"])
@@ -993,9 +991,6 @@ if "mensaje_a_procesar" not in st.session_state:
 
 if "captura_uploader_ver" not in st.session_state:
     st.session_state["captura_uploader_ver"] = 0
-
-if "captura_clipboard_b64" not in st.session_state:
-    st.session_state["captura_clipboard_b64"] = None
 
 if "caja_reset_trigger" not in st.session_state:
     st.session_state["caja_reset_trigger"] = False
@@ -1187,10 +1182,8 @@ with st.sidebar:
                 renderizar_menu_opciones_hilo_reciente(s_id, titulo_mostrar, s_cuaderno)
 
     st.markdown("---")
-    # Parche 16: Encabezado en Times New Roman
     st.markdown('<div class="sidebar-config-times-title">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
 
-    # Modo Operativo Único: Tarjeta limpia y sobria
     st.markdown("""
         <div style="background-color: #1e1f20; border: 1px solid #3c4043; border-left: 3px solid #DCA48A; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
             <div style="font-size: 11px; color: #a8a8a8; text-transform: uppercase; letter-spacing: 0.8px;">Modo Operativo Activo</div>
@@ -1198,7 +1191,6 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # Parche 16: Identidad IA individual persistente por usuario en SQLite
     nombre_ia_guardado = obtener_nombre_ia_usuario(st.session_state.usuario_email)
     alias_ia_input = st.text_input(
         "Identidad IA:", 
@@ -1211,7 +1203,6 @@ with st.sidebar:
     else:
         alias_ia = nombre_ia_guardado
 
-    # Selector oficial de Voces
     opciones_voces_menu = [
         "Hombre (Tomás, Argentina neutral)",
         "Mujer (Elena, Argentina)"
@@ -1261,6 +1252,13 @@ if vista == "chat":
         st.session_state["messages"] = cargar_mensajes_sesion(sess_id)
         st.session_state["loaded_session_id"] = sess_id
 
+    # Si hay un nuevo mensaje pendiente de procesar, se consolida e inserta en la lista antes del renderizado
+    if st.session_state.get("mensaje_a_procesar"):
+        nuevo_msg_usuario = st.session_state["mensaje_a_procesar"]
+        crear_o_actualizar_sesion_db(sess_id, nuevo_msg_usuario, act_cuad)
+        guardar_mensaje_db(sess_id, "user", nuevo_msg_usuario, act_cuad)
+        st.session_state["messages"].append({"role": "user", "content": nuevo_msg_usuario})
+
     has_messages = len(st.session_state.get("messages", [])) > 0
 
     with st.expander("📁 Agregar fuentes, libros y expedientes al cuaderno actual"):
@@ -1296,18 +1294,107 @@ if vista == "chat":
 
     with chat_container:
         if not has_messages:
-            # Parche 16: Bienvenida calibrada en Times New Roman y formato oración
             renderizar_bienvenida_calibrada(user_name, alias_display, act_cuad, st.session_state.perfil_voz)
         else:
             for idx_m, msg in enumerate(st.session_state.get("messages", [])):
                 if msg["role"] == "user":
-                    # Parche 15: Burbuja de usuario restaurada con menú (Editar/Copiar)
+                    # Renderizado persistente con nombre en oro rosa y botones editar/copiar
                     renderizar_burbuja_usuario_con_acciones(idx_m, msg["content"], user_name)
                 else:
                     with st.chat_message("assistant", avatar=None):
                         st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
 
-    # Componente de voz y audio activo con limpieza de caracteres
+    # ----------------- PROCESAMIENTO ACTIVO DE RESPUESTA DE LA IA -----------------
+    if st.session_state.get("mensaje_a_procesar"):
+        prompt_a_ejecutar = st.session_state["mensaje_a_procesar"]
+        st.session_state["mensaje_a_procesar"] = None
+
+        with chat_container:
+            with st.chat_message("assistant", avatar=None):
+                st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
+                contenedor_res = st.empty()
+
+        respuesta_final = ""
+
+        if GEMINI_API_KEY:
+            try:
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
+                system_prompt = (
+                    f"{SYSTEM_INSTRUCTION_JUXALEGIS}\n\n"
+                    f"Estás operando en el cuaderno web '{act_cuad}' "
+                    f"con las siguientes fuentes documentales activas: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+                )
+
+                config_gemini = types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                    temperature=0.3,
+                )
+
+                payload = []
+                archivos_adjuntos = st.session_state.archivos_gemini_obj.get(act_cuad, [])
+                if archivos_adjuntos:
+                    payload.extend(archivos_adjuntos)
+
+                if st.session_state.get("img_captura_temporal"):
+                    img_captura = st.session_state.get("img_captura_temporal")
+                    b_img = io.BytesIO()
+                    img_captura.save(b_img, format="PNG")
+                    parte_img = types.Part.from_bytes(data=b_img.getvalue(), mime_type="image/png")
+                    prompt_captura_estructurado = f"""
+                    Analizá esta captura de pantalla adjunta con rigor pericial:
+                    1. LECTURA Y DETECCIÓN LITERAL: Transcribí textos, códigos o números de cédula/expediente/DNI.
+                    2. DIAGNÓSTICO: Explicá qué significa exactamente o cuál es el origen del error procesal/técnico.
+                    3. RESOLUCIÓN: Plan de acción ordenado para subsanarlo.
+                    Consulta del operador: {prompt_a_ejecutar}
+                    """
+                    payload.extend([parte_img, prompt_captura_estructurado])
+                    st.session_state["img_captura_temporal"] = None
+                else:
+                    payload.append(prompt_a_ejecutar)
+
+                if st.session_state.get("modelo_ia_seleccionado") == "Pro":
+                    candidatos = ["gemini-3.1-pro", "gemini-2.5-pro"]
+                else:
+                    candidatos = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-2.5-flash"]
+
+                exito = False
+                err_ult = None
+
+                with st.spinner(f"{alias_display} está procesando y consultando fuentes..."):
+                    for m_cand in candidatos:
+                        try:
+                            resp = client.models.generate_content(
+                                model=m_cand,
+                                contents=payload,
+                                config=config_gemini
+                            )
+                            if resp and resp.text:
+                                respuesta_final = resp.text
+                                exito = True
+                                break
+                        except Exception as e_c:
+                            err_ult = e_c
+                            continue
+
+                if not exito:
+                    respuesta_final = f"⚠️ Inconveniente en enlace con Gemini: {str(err_ult)}"
+
+                contenedor_res.markdown(respuesta_final)
+            except Exception as e_gen:
+                respuesta_final = f"⚠️ Inconveniente técnico: {str(e_gen)}"
+                contenedor_res.markdown(respuesta_final)
+        else:
+            respuesta_final = "⚠️ La clave de API (GEMINI_API_KEY) no se encuentra configurada en los Secrets de Streamlit."
+            contenedor_res.markdown(respuesta_final)
+
+        guardar_mensaje_db(sess_id, "assistant", respuesta_final, act_cuad)
+        st.session_state["messages"].append({"role": "assistant", "content": respuesta_final})
+        st.session_state["captura_uploader_ver"] += 1
+        st.rerun()
+
+    # Componente de síntesis TTS
     ultimo_texto_asistente = ""
     for m in reversed(st.session_state.get("messages", [])):
         if m["role"] == "assistant":
@@ -1318,7 +1405,6 @@ if vista == "chat":
     texto_audio_seguro = texto_limpio_audio.replace('"', '\\"').replace('\n', ' ')
     perfil_voz_activa = st.session_state.get("perfil_voz", "hombre")
 
-    # Inyección directa de TTS y audio player
     components.html(f"""
         <!DOCTYPE html>
         <html>
@@ -1375,7 +1461,7 @@ if vista == "chat":
         </html>
     """, height=42)
 
-    # Parche 13: Motor de micrófono y dictado robusto con getUserMedia
+    # Componente de dictado de micrófono robusto
     components.html("""
         <!DOCTYPE html>
         <html>
@@ -1395,7 +1481,7 @@ if vista == "chat":
                         return true;
                     } catch (err) {
                         console.error("Permiso de micrófono denegado:", err);
-                        alert("Por favor, haga clic en el candado de la barra de direcciones y permita el acceso al Micrófono para JUXALEGIS OS.");
+                        alert("Por favor, permita el acceso al micrófono en su navegador para JUXALEGIS OS.");
                         return false;
                     }
                 }
@@ -1498,29 +1584,6 @@ if vista == "chat":
         </html>
     """, height=0, width=0)
 
-    # Parche 12: Escucha de capturas pegadas en el portapapeles (Ctrl+V)
-    components.html("""
-        <script>
-            document.addEventListener('paste', function (e) {
-                const items = (e.clipboardData || window.clipboardData).items;
-                for (let index in items) {
-                    const item = items[index];
-                    if (item.kind === 'file' && item.type.indexOf('image') !== -1) {
-                        const blob = item.getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = function (event) {
-                            window.parent.postMessage({
-                                tipo: 'CAPTURA_PEGADA_PORTAPAPELES',
-                                imagen_b64: event.target.result
-                            }, '*');
-                        };
-                        reader.readAsDataURL(blob);
-                    }
-                }
-            });
-        </script>
-    """, height=0, width=0)
-
     # Previsualizador de captura manual activa
     uploader_ver = st.session_state["captura_uploader_ver"]
     captura_archivo_manual = st.file_uploader(
@@ -1529,18 +1592,18 @@ if vista == "chat":
         key=f"uploader_captura_pantalla_v_{uploader_ver}",
         label_visibility="collapsed"
     )
-    img_captura_activa = None
     if captura_archivo_manual:
-        img_captura_activa = Image.open(captura_archivo_manual)
+        st.session_state["img_captura_temporal"] = Image.open(captura_archivo_manual)
         col_c1, col_c2 = st.columns([0.85, 0.15])
         with col_c1:
-            st.image(img_captura_activa, caption="📸 Captura lista para lectura pericial", width=250)
+            st.image(st.session_state["img_captura_temporal"], caption="📸 Captura lista para lectura pericial", width=250)
         with col_c2:
             if st.button("✕ Quitar captura"):
+                st.session_state["img_captura_temporal"] = None
                 st.session_state["captura_uploader_ver"] += 1
                 st.rerun()
 
-    # Módulos de creación abiertos desde el popover '+'
+    # Módulos de creación multimedia
     modo_creacion = st.session_state.get("modo_activo", None)
     if modo_creacion == "imagen":
         with st.expander("🖼️ Generador de Imágenes Corporativas", expanded=True):
@@ -1588,7 +1651,7 @@ if vista == "chat":
                 st.toast("Conexión con Google Drive iniciada...", icon="🔺")
             with st.expander("💬 Más cargas", expanded=False):
                 if st.button("📷 Foto / Captura", key="btn_foto", use_container_width=True):
-                    st.toast("Puede pegar directamente con Ctrl+V o cargar la imagen arriba.")
+                    st.toast("Puede adjuntar la imagen mediante el selector superior.")
                 if st.button("💻 Importar código", key="btn_codigo", use_container_width=True):
                     st.toast("Pegue el bloque de código en la consulta técnica.")
                 if st.button("📓 Notebook (.ipynb)", key="btn_notebook", use_container_width=True):
@@ -1653,104 +1716,6 @@ if vista == "chat":
                 st.session_state["caja_reset_trigger"] = True
                 st.rerun()
 
-    # ----------------- PROCESAMIENTO CON CLIENTE GEMINI -----------------
-    if st.session_state.get("mensaje_a_procesar"):
-        prompt_actual = st.session_state["mensaje_a_procesar"]
-        st.session_state["mensaje_a_procesar"] = None
-
-        act_cuad_save = st.session_state.get("cuaderno_activo", "General")
-        sess_id = st.session_state.get("current_session_id")
-
-        crear_o_actualizar_sesion_db(sess_id, prompt_actual, act_cuad_save)
-        guardar_mensaje_db(sess_id, "user", prompt_actual, act_cuad_save)
-        st.session_state["messages"].append({"role": "user", "content": prompt_actual})
-
-        with chat_container:
-            with st.chat_message("user", avatar=None):
-                st.markdown(f"<span style='color: #DCA48A; font-weight: 800;'>{user_name}:</span><br>{prompt_actual}", unsafe_allow_html=True)
-            with st.chat_message("assistant", avatar=None):
-                st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
-                contenedor_res = st.empty()
-
-        respuesta_final = ""
-
-        if GEMINI_API_KEY:
-            try:
-                client = genai.Client(api_key=GEMINI_API_KEY)
-                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
-                system_prompt = (
-                    f"{SYSTEM_INSTRUCTION_JUXALEGIS}\n\n"
-                    f"Estás operando en el cuaderno web '{act_cuad_save}' "
-                    f"con las siguientes fuentes documentales activas: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-                )
-
-                config_gemini = types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    tools=[types.Tool(google_search=types.GoogleSearch())],
-                    temperature=0.3,
-                )
-
-                payload = []
-                archivos_adjuntos = st.session_state.archivos_gemini_obj.get(act_cuad_save, [])
-                if archivos_adjuntos:
-                    payload.extend(archivos_adjuntos)
-
-                # Si hay captura manual activa se procesa en 3 fases periciales
-                if img_captura_activa:
-                    b_img = io.BytesIO()
-                    img_captura_activa.save(b_img, format="PNG")
-                    parte_img = types.Part.from_bytes(data=b_img.getvalue(), mime_type="image/png")
-                    prompt_captura_estructurado = f"""
-                    Analizá esta captura de pantalla adjunta con rigor pericial:
-                    1. LECTURA Y DETECCIÓN LITERAL: Transcribí textos, códigos o números de cédula/expediente/DNI.
-                    2. DIAGNÓSTICO: Explicá qué significa exactamente o cuál es el origen del error procesal/técnico.
-                    3. RESOLUCIÓN: Plan de acción ordenado para subsanarlo.
-                    Consulta del operador: {prompt_actual}
-                    """
-                    payload.extend([parte_img, prompt_captura_estructurado])
-                else:
-                    payload.append(prompt_actual)
-
-                if st.session_state.get("modelo_ia_seleccionado") == "Pro":
-                    candidatos = ["gemini-3.1-pro", "gemini-2.5-pro"]
-                else:
-                    candidatos = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-2.5-flash"]
-
-                exito = False
-                err_ult = None
-
-                with st.spinner(f"{alias_display} está procesando y consultando fuentes..."):
-                    for m_cand in candidatos:
-                        try:
-                            resp = client.models.generate_content(
-                                model=m_cand,
-                                contents=payload,
-                                config=config_gemini
-                            )
-                            if resp and resp.text:
-                                respuesta_final = resp.text
-                                exito = True
-                                break
-                        except Exception as e_c:
-                            err_ult = e_c
-                            continue
-
-                if not exito:
-                    respuesta_final = f"⚠️ Inconveniente en enlace con Gemini: {str(err_ult)}"
-
-                contenedor_res.markdown(respuesta_final)
-            except Exception as e_gen:
-                respuesta_final = f"⚠️ Inconveniente técnico: {str(e_gen)}"
-                contenedor_res.markdown(respuesta_final)
-        else:
-            respuesta_final = "⚠️ La clave de API (GEMINI_API_KEY) no se encuentra configurada en los Secrets de Streamlit."
-            contenedor_res.markdown(respuesta_final)
-
-        guardar_mensaje_db(sess_id, "assistant", respuesta_final, act_cuad_save)
-        st.session_state["messages"].append({"role": "assistant", "content": respuesta_final})
-        st.session_state["captura_uploader_ver"] += 1
-        st.rerun()
-
 # ----------------- OTRAS VISTAS DEL SISTEMA -----------------
 elif vista == "buscar_chats":
     st.markdown('<div class="module-header-serif">HISTORIAL Y BÚSQUEDA DE SESIONES</div>', unsafe_allow_html=True)
@@ -1801,7 +1766,6 @@ elif vista == "videos":
             st.video(v_bytes)
 
 elif vista == "biblioteca":
-    # Parche 11: Renderizado de biblioteca dinámica y planillas
     renderizar_vista_biblioteca_dinamica()
 
 elif vista == "ver_cuaderno":
@@ -1819,7 +1783,6 @@ elif vista == "ver_cuaderno":
             st.session_state["active_view"] = "chat"
             st.rerun()
 
-    # Parche 14: Gestión integral de causas dentro del cuaderno
     renderizar_hilos_expediente_con_acciones(cuaderno)
 
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
