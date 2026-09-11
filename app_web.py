@@ -1,8 +1,8 @@
 # ------------------------------------------------------------------------------
-# JUXALEGIS OS — OPERATING SYSTEM (PRODUCCIÓN DEFINITIVA INTEGRAL CORREGIDA)
+# JUXALEGIS OS — OPERATING SYSTEM (PRODUCCIÓN DEFINITIVA UNIFICADA AL 100%)
 # ARQUITECTURA: PYTHON + STREAMLIT + SQLITE (juxalegis_os.db)
-# INTEGRACIÓN OFICIAL: SDK GOOGLE-GENAI (GEMINI FLASH / PRO + GROUNDING + VISION)
-# CORRECCIÓN INTEGRAL: PERSISTENCIA TOTAL DE MENSAJES Y ACCIONES DE USUARIO
+# INTEGRACIÓN OFICIAL: SDK GOOGLE-GENAI (GEMINI FLASH / PRO + GROUNDING + MULTIMODAL)
+# CONSOLIDACIÓN TOTAL: PARCHES 1 AL 16 + CORRECCIONES OPERATIVAS Y DE PERSONALIDAD
 # ------------------------------------------------------------------------------
 
 import os
@@ -622,22 +622,44 @@ def generar_video_institucional(client, prompt_guion):
         st.error(f"Inconveniente en generación audiovisual: {error}")
         return None
 
-def formatear_nombre_tipo_oracion(nombre_raw: str) -> str:
-    nom = nombre_raw.strip().upper()
-    if "MARTIN" in nom:
-        return "Dra. Martín"
-    elif "CAMPOS" in nom:
-        return "Dr. Campos"
-    elif "GAIL" in nom:
-        return "Gail"
-    return nombre_raw.strip().title()
+# ----------------- PARCHE: PROTOCOLO, GÉNERO Y PERSONALIDAD ASISTENCIAL -----------------
+def obtener_tratamiento_usuario(email_usuario: str) -> dict:
+    mail = email_usuario.lower().strip()
+    if "martin" in mail:
+        return {
+            "vocativo": "Estimada Dra. Martín",
+            "genero": "femenino",
+            "pronombre_objeto": "asistirla"
+        }
+    elif "campos" in mail:
+        return {
+            "vocativo": "Estimado Dr. Campos",
+            "genero": "masculino",
+            "pronombre_objeto": "asistirlo"
+        }
+    elif "gail" in mail:
+        return {
+            "vocativo": "Estimada Gail",
+            "genero": "femenino",
+            "pronombre_objeto": "asistirla"
+        }
+    else:
+        nombre_base = mail.split('@')[0].replace('.', ' ').title()
+        return {
+            "vocativo": f"Estimado/a {nombre_base}",
+            "genero": "neutro",
+            "pronombre_objeto": "asistirle"
+        }
 
 def renderizar_bienvenida_calibrada(user_name_raw, alias_display, act_cuad, perfil_voz):
-    nombre_formateado = formatear_nombre_tipo_oracion(user_name_raw)
+    datos_traspaso = obtener_tratamiento_usuario(st.session_state.get("usuario_email", ""))
+    vocativo_destacado = datos_traspaso["vocativo"]
+    pronombre = datos_traspaso["pronombre_objeto"]
+
     st.markdown(f"""
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 38vh; text-align: center; gap: 20px;">
             <h1 class="saludo-bienvenida-times">
-                ¿En qué puedo asistirte hoy, <span class="saludo-usuario-rosaoro">{nombre_formateado}</span>?
+                {vocativo_destacado}, ¿en qué puedo {pronombre} hoy?
             </h1>
             <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
                 <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">⚙️ ASISTENTE INTEGRAL</span>
@@ -648,22 +670,72 @@ def renderizar_bienvenida_calibrada(user_name_raw, alias_display, act_cuad, perf
         </div>
     """, unsafe_allow_html=True)
 
-# ----------------- BURBUJA DE USUARIO CON ACCIONES GARANTIZADAS -----------------
+def construir_system_prompt_personalizado(act_cuad_save: str, alias_display: str, perfil_voz_activa: str) -> str:
+    datos_usr = obtener_tratamiento_usuario(st.session_state.get("usuario_email", ""))
+    genero_usuario = datos_usr["genero"]
+    vocativo_oficial = datos_usr["vocativo"]
+
+    if perfil_voz_activa == "mujer":
+        autopercepcion_ia = (
+            f"Tu identidad operativa es femenina bajo el nombre {alias_display}. "
+            f"Debes autopercibirte y redactar en primera persona femenina (ej: 'estoy preparada', 'quedo atenta', 'comprometida')."
+        )
+    else:
+        autopercepcion_ia = (
+            f"Tu identidad operativa es masculina bajo el nombre {alias_display}. "
+            f"Debes autopercibirte y redactar en primera persona masculina (ej: 'estoy preparado', 'quedo atento', 'comprometido')."
+        )
+
+    adicional_conducta = f"""
+VI. PROTOCOLO DE IDENTIDAD, TRATAMIENTO Y ASERTIVIDAD INMEDIATA
+
+1. Concordancia de Interlocutor:
+Estás interactuando con: {vocativo_oficial} (género {genero_usuario}).
+Dirígete siempre respetando rigurosamente su género y rango formal. Si es mujer: «Estimada Dra. Martín», «doctora», o fórmulas análogas concordadas en femenino. Si es varón: «Estimado Dr. Campos», «doctor», etc.
+
+2. Autopercepción de la IA:
+{autopercepcion_ia}
+
+3. Estructura Obligatoria de Respuesta (Regla de Asertividad Binaria):
+Ante toda consulta, planteo, viabilidad, duda técnica, procesal o de código formulada por tu colega/directora:
+- LA PRIMERA PALABRA DE TU RESPUESTA DEBE SER TAJANTE Y CATEGÓRICA: «SÍ.» o «NO.».
+- Quedan prohibidas las introducciones tibias, dubitativas o evasivas (como «En principio dependerá...», «Es relativo...», «Podría ser...»).
+- Inmediatamente después de fijar el «SÍ.» o «NO.», desarrolla en párrafos ordenados el fundamento dogmático, normativo, jurisprudencial o técnico que sustenta esa postura (el porqué sí o el porqué no).
+
+4. Prohibición de Inventarios de Habilidades:
+Al abrir una interacción o contacto de trabajo, limítate a saludar protocolarmente y ponerte a disposición para comenzar la labor.
+Queda terminantemente prohibido recitar o auto-presentar lo que sabes hacer (ej: «puedo redactar demandas, verificar códigos, analizar convenios...»). Ve directo al grano sin dilaciones.
+"""
+    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
+    return (
+        f"{SYSTEM_INSTRUCTION_JUXALEGIS}\n\n"
+        f"{adicional_conducta}\n\n"
+        f"Estás operando en el cuaderno web '{act_cuad_save}' "
+        f"con las siguientes fuentes documentales activas: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+    )
+
+# ----------------- PARCHE: BURBUJA DE USUARIO CON ACCIONES GARANTIZADAS -----------------
 def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
     clave_edicion = f"editando_msg_{idx_m}"
     if clave_edicion not in st.session_state:
         st.session_state[clave_edicion] = False
 
     with st.chat_message("user", avatar=None):
-        col_msg_txt, col_msg_menu = st.columns([0.93, 0.07])
-        
+        col_msg_txt, col_msg_menu = st.columns([0.92, 0.08])
+
         with col_msg_menu:
-            with st.popover("⌵", help="Opciones"):
+            with st.popover("⌵", help="Opciones de la consulta"):
                 if st.button("✏️ Editar", key=f"btn_edit_user_{idx_m}", use_container_width=True):
                     st.session_state[clave_edicion] = True
                     st.rerun()
+
                 if st.button("📋 Copiar", key=f"btn_copy_user_{idx_m}", use_container_width=True):
-                    txt_escapado = msg_content.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$")
+                    txt_escapado = (
+                        msg_content.replace("\\", "\\\\")
+                        .replace("`", "\\`")
+                        .replace("$", "\\$")
+                        .replace("\n", "\\n")
+                    )
                     components.html(
                         f"""
                         <script>
@@ -681,24 +753,473 @@ def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
                     "Modificar y reenviar consulta:",
                     value=msg_content,
                     key=f"ta_edit_box_{idx_m}",
-                    height=100
+                    height=110
                 )
-                col_guardar, col_cancelar = st.columns([0.25, 0.75])
-                with col_guardar:
+                col_g, col_c = st.columns([0.28, 0.72])
+                with col_g:
                     if st.button("Reenviar", key=f"btn_submit_edit_{idx_m}"):
                         if nuevo_texto_editado.strip():
                             st.session_state[clave_edicion] = False
                             st.session_state["mensaje_a_procesar"] = nuevo_texto_editado.strip()
                             st.rerun()
-                with col_cancelar:
+                with col_c:
                     if st.button("Cancelar", key=f"btn_cancel_edit_{idx_m}"):
                         st.session_state[clave_edicion] = False
                         st.rerun()
             else:
                 st.markdown(
-                    f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{msg_content}",
+                    f"""
+                    <div style="line-height: 1.5;">
+                        <span style="color: #DCA48A; font-weight: 800; letter-spacing: 0.5px; font-size: 0.95rem;">{user_name}:</span>
+                        <div style="color: #FFF9E6; margin-top: 4px; white-space: pre-wrap;">{msg_content}</div>
+                    </div>
+                    """,
                     unsafe_allow_html=True
                 )
+
+# ----------------- PARCHE: PEGADO DIRECTO DE IMÁGENES (CTRL + V) -----------------
+def inyectar_receptor_clipboard_global():
+    components.html("""
+        <script>
+            window.parent.document.addEventListener('paste', function (e) {
+                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.type.indexOf('image') !== -1) {
+                        const blob = item.getAsFile();
+                        const reader = new FileReader();
+                        reader.onload = function (event) {
+                            const b64Data = event.target.result;
+                            window.parent.postMessage({
+                                type: 'STREAMLIT_PASTE_IMAGE',
+                                b64: b64Data
+                            }, '*');
+                            const evt = new CustomEvent('imagen_pegada_evento', { detail: b64Data });
+                            window.parent.document.dispatchEvent(evt);
+                        };
+                        reader.readAsDataURL(blob);
+                        break;
+                    }
+                }
+            });
+        </script>
+    """, height=0, width=0)
+
+def renderizar_previsualizador_captura_activa():
+    img_activa = st.session_state.get("captura_pegada_pil") or st.session_state.get("img_captura_temporal")
+    if img_activa:
+        col_prev, col_btn_del = st.columns([0.85, 0.15])
+        with col_prev:
+            st.markdown("""
+                <div style="background-color: #1e1f20; border: 1px solid #DCA48A; border-radius: 10px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 10px; margin-bottom: 6px;">
+                    <span style="font-size: 12px; color: #DCA48A; font-weight: 700;">📸 CAPTURA ADJUNTA (CTRL+V / CARGA):</span>
+                    <span style="font-size: 11px; color: #FFF9E6;">Lista para lectura y peritaje multimodal</span>
+                </div>
+            """, unsafe_allow_html=True)
+            st.image(img_activa, width=180)
+        with col_btn_del:
+            if st.button("✕ Quitar", key="btn_quitar_captura_pegada", use_container_width=True):
+                st.session_state["captura_pegada_pil"] = None
+                st.session_state["img_captura_temporal"] = None
+                st.rerun()
+
+def extraer_parte_imagen_para_gemini():
+    img_a_procesar = st.session_state.get("captura_pegada_pil") or st.session_state.get("img_captura_temporal")
+    if img_a_procesar:
+        buffer = io.BytesIO()
+        img_a_procesar.save(buffer, format="PNG")
+        parte_multimodal = types.Part.from_bytes(
+            data=buffer.getvalue(),
+            mime_type="image/png"
+        )
+        st.session_state["captura_pegada_pil"] = None
+        st.session_state["img_captura_temporal"] = None
+        return parte_multimodal
+    return None
+
+# ----------------- PARCHE: SÍNTESIS DE VOZ NATURAL (TTS) -----------------
+def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_activa):
+    if not ultimo_texto_asistente or not ultimo_texto_asistente.strip():
+        return
+
+    texto_depurado = re.sub(r'[\*\_#`\[\]\(\)>~]', ' ', ultimo_texto_asistente)
+    texto_depurado = re.sub(r'https?://\S+', ' ', texto_depurado)
+    texto_depurado = re.sub(r'\s+', ' ', texto_depurado).strip()
+
+    texto_js_seguro = (
+        texto_depurado
+        .replace('\\', '\\\\')
+        .replace('"', '\\"')
+        .replace("'", "\\'")
+        .replace('\n', ' ')
+        .replace('\r', '')
+    )
+
+    components.html(f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {{
+                    margin: 0;
+                    padding: 0;
+                    background: transparent;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }}
+                .btn-audio-dock {{
+                    background: #1e1f20;
+                    color: #E1E6EB;
+                    border: 1px solid #3c4043;
+                    border-radius: 50%;
+                    width: 38px;
+                    height: 38px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    font-size: 17px;
+                    transition: all 0.2s ease-in-out;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+                }}
+                .btn-audio-dock:hover {{
+                    border-color: #DCA48A;
+                    color: #DCA48A;
+                    transform: scale(1.05);
+                }}
+                .estado-reproduccion {{
+                    font-size: 11px;
+                    color: #8A99A8;
+                    font-weight: 600;
+                    letter-spacing: 0.3px;
+                }}
+            </style>
+        </head>
+        <body>
+            <button class="btn-audio-dock" id="btn-reproducir-tts" title="Escuchar respuesta profesional" onclick="gestionarReproduccionVocal()">
+                🔊
+            </button>
+            <span id="label-estado-tts" class="estado-reproduccion"></span>
+
+            <script>
+                let synth = window.speechSynthesis;
+                let textoCompleto = "{texto_js_seguro}";
+                let perfilObjetivo = "{perfil_voz_activa}";
+                let listaVoces = [];
+
+                function cargarVocesDisponibles() {{
+                    if (!('speechSynthesis' in window)) return;
+                    listaVoces = synth.getVoices();
+                }}
+
+                cargarVocesDisponibles();
+                if ('speechSynthesis' in window) {{
+                    window.speechSynthesis.onvoiceschanged = cargarVocesDisponibles;
+                }}
+
+                function seleccionarMejorVoz(perfil) {{
+                    if (!listaVoces || listaVoces.length === 0) {{
+                        cargarVocesDisponibles();
+                    }}
+
+                    let vocesEspanol = listaVoces.filter(v => v.lang.toLowerCase().startsWith('es'));
+                    if (vocesEspanol.length === 0) {{
+                        return listaVoces[0] || null;
+                    }}
+
+                    let seleccion = null;
+                    if (perfil === "mujer") {{
+                        seleccion = vocesEspanol.find(v => 
+                            (v.name.toLowerCase().includes('elena') || 
+                             v.name.toLowerCase().includes('estela') ||
+                             v.name.toLowerCase().includes('sabina') || 
+                             v.name.toLowerCase().includes('paulina') || 
+                             v.name.toLowerCase().includes('monica') ||
+                             v.name.toLowerCase().includes('jimena') ||
+                             v.name.toLowerCase().includes('dalia') ||
+                             v.name.toLowerCase().includes('female') ||
+                             v.name.toLowerCase().includes('mujer')) &&
+                            (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online') || v.name.toLowerCase().includes('google'))
+                        );
+
+                        if (!seleccion) {{
+                            seleccion = vocesEspanol.find(v => 
+                                v.name.toLowerCase().includes('elena') || 
+                                v.name.toLowerCase().includes('sabina') || 
+                                v.name.toLowerCase().includes('paulina') || 
+                                v.name.toLowerCase().includes('monica') ||
+                                v.name.toLowerCase().includes('female') ||
+                                v.name.toLowerCase().includes('zira')
+                            );
+                        }}
+
+                        if (!seleccion) {{
+                            seleccion = vocesEspanol.find(v => v.name.toLowerCase().includes('google español') || v.lang.includes('AR'));
+                        }}
+                    }} else {{
+                        seleccion = vocesEspanol.find(v => 
+                            (v.name.toLowerCase().includes('tomas') || 
+                             v.name.toLowerCase().includes('jorge') || 
+                             v.name.toLowerCase().includes('diego') ||
+                             v.name.toLowerCase().includes('alvaro') ||
+                             v.name.toLowerCase().includes('male') ||
+                             v.name.toLowerCase().includes('hombre')) &&
+                            (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online'))
+                        );
+
+                        if (!seleccion) {{
+                            seleccion = vocesEspanol.find(v => 
+                                v.name.toLowerCase().includes('tomas') || 
+                                v.name.toLowerCase().includes('diego') ||
+                                v.name.toLowerCase().includes('male') ||
+                                v.name.toLowerCase().includes('david')
+                            );
+                        }}
+                    }}
+
+                    return seleccion || vocesEspanol[0];
+                }}
+
+                function gestionarReproduccionVocal() {{
+                    if (!('speechSynthesis' in window)) {{
+                        alert("Su navegador no soporta síntesis vocal web.");
+                        return;
+                    }}
+
+                    let btn = document.getElementById('btn-reproducir-tts');
+                    let lbl = document.getElementById('label-estado-tts');
+
+                    if (synth.speaking) {{
+                        synth.cancel();
+                        btn.innerText = '🔊';
+                        lbl.innerText = '';
+                        return;
+                    }}
+
+                    if (!textoCompleto.trim()) return;
+
+                    synth.cancel();
+
+                    let locucion = new SpeechSynthesisUtterance(textoCompleto);
+                    let vozOptima = seleccionarMejorVoz(perfilObjetivo);
+
+                    if (vozOptima) {{
+                        locucion.voice = vozOptima;
+                        locucion.lang = vozOptima.lang;
+                    }} else {{
+                        locucion.lang = 'es-AR';
+                    }}
+
+                    locucion.rate = 1.06;
+                    locucion.pitch = perfilObjetivo === "mujer" ? 1.02 : 0.98;
+
+                    locucion.onstart = function() {{
+                        btn.innerText = '⏹️';
+                        lbl.innerText = 'Reproduciendo...';
+                    }};
+
+                    locucion.onend = function() {{
+                        btn.innerText = '🔊';
+                        lbl.innerText = '';
+                    }};
+
+                    locucion.onerror = function(err) {{
+                        console.error("Error en reproducción TTS:", err);
+                        btn.innerText = '🔊';
+                        lbl.innerText = '';
+                    }};
+
+                    synth.speak(locucion);
+                }}
+            </script>
+        </body>
+        </html>
+    """, height=42)
+
+# ----------------- PARCHE: CONTROLADOR NATIVO DE MICRÓFONO ROBUSTO -----------------
+def renderizar_motor_microfono_directo():
+    html_mic_motor = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {
+                margin: 0;
+                padding: 0;
+                background: transparent;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                overflow: hidden;
+            }
+            .btn-mic-dock {
+                background-color: #1e1f20;
+                border: 1px solid #3c4043;
+                color: #e3e3e3;
+                border-radius: 50%;
+                width: 44px;
+                height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                font-size: 19px;
+                transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                outline: none;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+            }
+            .btn-mic-dock:hover {
+                border-color: #DCA48A;
+                color: #DCA48A;
+                transform: scale(1.05);
+            }
+            .btn-mic-dock.grabando {
+                background-color: #8a2424 !important;
+                border-color: #ff5252 !important;
+                color: #ffffff !important;
+                box-shadow: 0 0 14px rgba(255, 82, 82, 0.6) !important;
+                animation: pulso-mic 1.4s infinite;
+            }
+            @keyframes pulso-mic {
+                0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
+                70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+            }
+        </style>
+    </head>
+    <body>
+        <button id="btn-mic-activo" class="btn-mic-dock" title="Haga clic para hablar" onclick="conmutarGrabacionVoz()">
+            🎤
+        </button>
+
+        <script>
+            let recognizer = null;
+            let estaGrabando = false;
+            let transcriptorAcumulado = '';
+
+            function obtenerReconocedor() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    alert("Su navegador no admite dictado por voz directo. Utilice Google Chrome, Edge o Safari.");
+                    return null;
+                }
+                const r = new SpeechRecognition();
+                r.lang = 'es-AR';
+                r.continuous = true;
+                r.interimResults = true;
+                r.maxAlternatives = 1;
+
+                r.onstart = function() {
+                    estaGrabando = true;
+                    transcriptorAcumulado = '';
+                    const btn = document.getElementById('btn-mic-activo');
+                    if (btn) {
+                        btn.classList.add('grabando');
+                        btn.innerText = '🔴';
+                        btn.title = "Escuchando... Haga clic para detener y enviar al texto";
+                    }
+                };
+
+                r.onend = function() {
+                    estaGrabando = false;
+                    const btn = document.getElementById('btn-mic-activo');
+                    if (btn) {
+                        btn.classList.remove('grabando');
+                        btn.innerText = '🎤';
+                        btn.title = "Haga clic para hablar";
+                    }
+                };
+
+                r.onerror = function(event) {
+                    console.error("Falla de micrófono:", event.error);
+                    estaGrabando = false;
+                    const btn = document.getElementById('btn-mic-activo');
+                    if (btn) {
+                        btn.classList.remove('grabando');
+                        btn.innerText = '🎤';
+                    }
+
+                    if (event.error === 'not-allowed') {
+                        alert("Acceso al micrófono denegado. Haga clic en el candado junto a la URL del navegador y seleccione 'Permitir micrófono'.");
+                    } else if (event.error === 'network') {
+                        alert("Inconveniente de red con el servicio de voz de su navegador.");
+                    }
+                };
+
+                r.onresult = function(event) {
+                    let fragmentoFinal = '';
+                    for (let i = event.resultIndex; i < event.results.length; ++i) {
+                        if (event.results[i].isFinal) {
+                            fragmentoFinal += event.results[i][0].transcript + ' ';
+                        }
+                    }
+
+                    if (fragmentoFinal.trim() !== '') {
+                        inyectarTextoEnStreamlit(fragmentoFinal.trim());
+                    }
+                };
+
+                return r;
+            }
+
+            function inyectarTextoEnStreamlit(textoDictado) {
+                try {
+                    const textareas = window.parent.document.querySelectorAll('textarea');
+                    if (textareas && textareas.length > 0) {
+                        const areaTarget = textareas[0];
+                        const prototypeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                        const valorPrevio = areaTarget.value ? areaTarget.value.trim() + ' ' : '';
+                        const valorCompleto = valorPrevio + textoDictado;
+
+                        prototypeSetter.call(areaTarget, valorCompleto);
+                        areaTarget.dispatchEvent(new Event('input', { bubbles: true }));
+                        areaTarget.dispatchEvent(new Event('change', { bubbles: true }));
+                        areaTarget.focus();
+                    }
+                } catch (e) {
+                    console.error("Error volcando texto al área principal:", e);
+                }
+            }
+
+            async function conmutarGrabacionVoz() {
+                if (estaGrabando) {
+                    if (recognizer) recognizer.stop();
+                    return;
+                }
+
+                try {
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                        const streamPrueba = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        streamPrueba.getTracks().forEach(t => t.stop());
+                    }
+                } catch (errPermiso) {
+                    alert("No se pudo iniciar el micrófono. Verifique que no esté siendo utilizado por otra aplicación y que los permisos del navegador estén concedidos.");
+                    return;
+                }
+
+                if (!recognizer) {
+                    recognizer = obtenerReconocedor();
+                }
+
+                if (recognizer) {
+                    try {
+                        recognizer.start();
+                    } catch (ex) {
+                        recognizer.stop();
+                        setTimeout(() => recognizer.start(), 250);
+                    }
+                }
+            }
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_mic_motor, height=52, scrolling=False)
 
 # ----------------- MENÚ CONTEXTUAL DE HILOS RECIENTES -----------------
 def renderizar_menu_opciones_hilo_reciente(s_id, titulo_mostrar, cuaderno_actual_hilo):
@@ -992,6 +1513,12 @@ if "mensaje_a_procesar" not in st.session_state:
 if "captura_uploader_ver" not in st.session_state:
     st.session_state["captura_uploader_ver"] = 0
 
+if "captura_pegada_pil" not in st.session_state:
+    st.session_state["captura_pegada_pil"] = None
+
+if "img_captura_temporal" not in st.session_state:
+    st.session_state["img_captura_temporal"] = None
+
 if "caja_reset_trigger" not in st.session_state:
     st.session_state["caja_reset_trigger"] = False
 
@@ -1068,6 +1595,8 @@ with st.sidebar:
         st.session_state["loaded_session_id"] = st.session_state["current_session_id"]
         st.session_state.audio_text_to_speak = ""
         st.session_state["captura_uploader_ver"] += 1
+        st.session_state["captura_pegada_pil"] = None
+        st.session_state["img_captura_temporal"] = None
         st.rerun()
 
     if st.button("🔍 Buscar chats", use_container_width=True):
@@ -1248,16 +1777,17 @@ if vista == "chat":
     act_cuad = st.session_state.get("cuaderno_activo", "General")
     sess_id = st.session_state.get("current_session_id", "")
 
+    # 1. Cargar historial desde SQLite SÓLO si cambió de sesión
     if sess_id and st.session_state.get("loaded_session_id") != sess_id:
         st.session_state["messages"] = cargar_mensajes_sesion(sess_id)
         st.session_state["loaded_session_id"] = sess_id
 
-    # Si hay un nuevo mensaje pendiente de procesar, se consolida e inserta en la lista antes del renderizado
+    # 2. Si el usuario envió un mensaje, se guarda inmediatamente y se inyecta en messages
     if st.session_state.get("mensaje_a_procesar"):
-        nuevo_msg_usuario = st.session_state["mensaje_a_procesar"]
-        crear_o_actualizar_sesion_db(sess_id, nuevo_msg_usuario, act_cuad)
-        guardar_mensaje_db(sess_id, "user", nuevo_msg_usuario, act_cuad)
-        st.session_state["messages"].append({"role": "user", "content": nuevo_msg_usuario})
+        prompt_usuario_actual = st.session_state["mensaje_a_procesar"]
+        crear_o_actualizar_sesion_db(sess_id, prompt_usuario_actual, act_cuad)
+        guardar_mensaje_db(sess_id, "user", prompt_usuario_actual, act_cuad)
+        st.session_state["messages"].append({"role": "user", "content": prompt_usuario_actual})
 
     has_messages = len(st.session_state.get("messages", [])) > 0
 
@@ -1298,7 +1828,6 @@ if vista == "chat":
         else:
             for idx_m, msg in enumerate(st.session_state.get("messages", [])):
                 if msg["role"] == "user":
-                    # Renderizado persistente con nombre en oro rosa y botones editar/copiar
                     renderizar_burbuja_usuario_con_acciones(idx_m, msg["content"], user_name)
                 else:
                     with st.chat_message("assistant", avatar=None):
@@ -1319,12 +1848,7 @@ if vista == "chat":
         if GEMINI_API_KEY:
             try:
                 client = genai.Client(api_key=GEMINI_API_KEY)
-                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad, [])
-                system_prompt = (
-                    f"{SYSTEM_INSTRUCTION_JUXALEGIS}\n\n"
-                    f"Estás operando en el cuaderno web '{act_cuad}' "
-                    f"con las siguientes fuentes documentales activas: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-                )
+                system_prompt = construir_system_prompt_personalizado(act_cuad, alias_display, st.session_state.get("perfil_voz", "hombre"))
 
                 config_gemini = types.GenerateContentConfig(
                     system_instruction=system_prompt,
@@ -1337,11 +1861,8 @@ if vista == "chat":
                 if archivos_adjuntos:
                     payload.extend(archivos_adjuntos)
 
-                if st.session_state.get("img_captura_temporal"):
-                    img_captura = st.session_state.get("img_captura_temporal")
-                    b_img = io.BytesIO()
-                    img_captura.save(b_img, format="PNG")
-                    parte_img = types.Part.from_bytes(data=b_img.getvalue(), mime_type="image/png")
+                parte_captura = extraer_parte_imagen_para_gemini()
+                if parte_captura:
                     prompt_captura_estructurado = f"""
                     Analizá esta captura de pantalla adjunta con rigor pericial:
                     1. LECTURA Y DETECCIÓN LITERAL: Transcribí textos, códigos o números de cédula/expediente/DNI.
@@ -1349,8 +1870,7 @@ if vista == "chat":
                     3. RESOLUCIÓN: Plan de acción ordenado para subsanarlo.
                     Consulta del operador: {prompt_a_ejecutar}
                     """
-                    payload.extend([parte_img, prompt_captura_estructurado])
-                    st.session_state["img_captura_temporal"] = None
+                    payload.extend([parte_captura, prompt_captura_estructurado])
                 else:
                     payload.append(prompt_a_ejecutar)
 
@@ -1394,195 +1914,17 @@ if vista == "chat":
         st.session_state["captura_uploader_ver"] += 1
         st.rerun()
 
-    # Componente de síntesis TTS
+    # Componente de síntesis TTS natural
     ultimo_texto_asistente = ""
     for m in reversed(st.session_state.get("messages", [])):
         if m["role"] == "assistant":
             ultimo_texto_asistente = m["content"]
             break
 
-    texto_limpio_audio = re.sub(r'[*#_`\[\]()>-]', '', ultimo_texto_asistente)
-    texto_audio_seguro = texto_limpio_audio.replace('"', '\\"').replace('\n', ' ')
-    perfil_voz_activa = st.session_state.get("perfil_voz", "hombre")
+    renderizar_reproductor_vocal_natural(ultimo_texto_asistente, st.session_state.get("perfil_voz", "hombre"))
 
-    components.html(f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <style>
-                body {{ margin: 0; padding: 0; background: transparent; display: flex; align-items: center; gap: 8px; }}
-                .btn-audio-mini {{
-                    background: #1e1f20; color: #e3e3e3; border: 1px solid #3c4043; border-radius: 50%;
-                    width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer;
-                    transition: all 0.2s;
-                }}
-                .btn-audio-mini:hover {{ border-color: #DCA48A; color: #DCA48A; }}
-            </style>
-        </head>
-        <body>
-            <button class="btn-audio-mini" title="Escuchar respuesta con cadencia natural" onclick="reproducirAudioFluido()">🔊</button>
-            <span id="st-audio" style="font-size: 12px; color: #8A99A8;"></span>
-
-            <script>
-                function reproducirAudioFluido() {{
-                    if (!('speechSynthesis' in window)) return;
-                    if (window.speechSynthesis.speaking) {{
-                        window.speechSynthesis.cancel();
-                        return;
-                    }}
-                    const txt = "{texto_audio_seguro}";
-                    if (!txt.trim()) return;
-
-                    const utter = new SpeechSynthesisUtterance(txt);
-                    utter.lang = 'es-AR';
-                    utter.rate = 1.12;
-                    utter.pitch = 1.0;
-
-                    const voces = window.speechSynthesis.getVoices();
-                    const perfil = "{perfil_voz_activa}";
-
-                    let vTarget = null;
-                    if (perfil === "hombre") {{
-                        vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('male')));
-                    }} else {{
-                        vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('female')));
-                    }}
-                    if (vTarget) utter.voice = vTarget;
-                    window.speechSynthesis.speak(utter);
-                }}
-
-                if ('speechSynthesis' in window) {{
-                    window.speechSynthesis.onvoiceschanged = function() {{
-                        window.speechSynthesis.getVoices();
-                    }};
-                }}
-            </script>
-        </body>
-        </html>
-    """, height=42)
-
-    # Componente de dictado de micrófono robusto
-    components.html("""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>body { margin: 0; padding: 0; background: transparent; }</style>
-        </head>
-        <body>
-            <script>
-                let recognition = null;
-                let grabacionActiva = false;
-                let streamAudio = null;
-
-                async function solicitarPermisoMicrofono() {
-                    try {
-                        streamAudio = await navigator.mediaDevices.getUserMedia({ audio: true });
-                        return true;
-                    } catch (err) {
-                        console.error("Permiso de micrófono denegado:", err);
-                        alert("Por favor, permita el acceso al micrófono en su navegador para JUXALEGIS OS.");
-                        return false;
-                    }
-                }
-
-                function inicializarReconocedor() {
-                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-                    if (!SpeechRecognition) {
-                        alert("Su navegador no soporta dictado por voz. Recomendamos Google Chrome o Microsoft Edge.");
-                        return null;
-                    }
-
-                    const rec = new SpeechRecognition();
-                    rec.lang = 'es-AR';
-                    rec.continuous = true;
-                    rec.interimResults = true;
-
-                    rec.onstart = function() {
-                        grabacionActiva = true;
-                        const btn = window.parent.document.getElementById('btn-mic-main');
-                        if (btn) {
-                            btn.style.backgroundColor = '#8a2424';
-                            btn.style.borderColor = '#ff5252';
-                            btn.style.color = '#ffffff';
-                            btn.innerText = '🔴';
-                        }
-                    };
-
-                    rec.onend = function() {
-                        grabacionActiva = false;
-                        const btn = window.parent.document.getElementById('btn-mic-main');
-                        if (btn) {
-                            btn.style.backgroundColor = '#1e1f20';
-                            btn.style.borderColor = '#3c4043';
-                            btn.style.color = '#e3e3e3';
-                            btn.innerText = '🎤';
-                        }
-                        if (streamAudio) {
-                            streamAudio.getTracks().forEach(track => track.stop());
-                        }
-                    };
-
-                    rec.onerror = function(event) {
-                        console.error("Error en reconocimiento de voz:", event.error);
-                        grabacionActiva = false;
-                        const btn = window.parent.document.getElementById('btn-mic-main');
-                        if (btn) {
-                            btn.style.backgroundColor = '#1e1f20';
-                            btn.style.borderColor = '#3c4043';
-                            btn.innerText = '🎤';
-                        }
-                    };
-
-                    rec.onresult = function(event) {
-                        let textoFinal = '';
-                        for (let i = event.resultIndex; i < event.results.length; ++i) {
-                            if (event.results[i].isFinal) {
-                                textoFinal += event.results[i][0].transcript + ' ';
-                            }
-                        }
-
-                        if (textoFinal.trim() !== '') {
-                            const textareas = window.parent.document.querySelectorAll('textarea');
-                            if (textareas.length > 0) {
-                                const area = textareas[0];
-                                const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                                const prevVal = area.value ? area.value + ' ' : '';
-                                nativeSetter.call(area, prevVal + textoFinal.trim());
-                                area.dispatchEvent(new Event('input', { bubbles: true }));
-                            }
-                        }
-                    };
-
-                    return rec;
-                }
-
-                window.parent.alternarDictadoMicrofono = async function() {
-                    if (grabacionActiva) {
-                        if (recognition) recognition.stop();
-                        return;
-                    }
-
-                    const permisoOk = await solicitarPermisoMicrofono();
-                    if (!permisoOk) return;
-
-                    if (!recognition) {
-                        recognition = inicializarReconocedor();
-                    }
-
-                    if (recognition) {
-                        try {
-                            recognition.start();
-                        } catch (e) {
-                            recognition.stop();
-                            setTimeout(() => recognition.start(), 300);
-                        }
-                    }
-                };
-            </script>
-        </body>
-        </html>
-    """, height=0, width=0)
+    # Inyección de escucha activa para pegado de capturas (Ctrl+V)
+    inyectar_receptor_clipboard_global()
 
     # Previsualizador de captura manual activa
     uploader_ver = st.session_state["captura_uploader_ver"]
@@ -1594,14 +1936,8 @@ if vista == "chat":
     )
     if captura_archivo_manual:
         st.session_state["img_captura_temporal"] = Image.open(captura_archivo_manual)
-        col_c1, col_c2 = st.columns([0.85, 0.15])
-        with col_c1:
-            st.image(st.session_state["img_captura_temporal"], caption="📸 Captura lista para lectura pericial", width=250)
-        with col_c2:
-            if st.button("✕ Quitar captura"):
-                st.session_state["img_captura_temporal"] = None
-                st.session_state["captura_uploader_ver"] += 1
-                st.rerun()
+
+    renderizar_previsualizador_captura_activa()
 
     # Módulos de creación multimedia
     modo_creacion = st.session_state.get("modo_activo", None)
@@ -1651,7 +1987,7 @@ if vista == "chat":
                 st.toast("Conexión con Google Drive iniciada...", icon="🔺")
             with st.expander("💬 Más cargas", expanded=False):
                 if st.button("📷 Foto / Captura", key="btn_foto", use_container_width=True):
-                    st.toast("Puede adjuntar la imagen mediante el selector superior.")
+                    st.toast("Puede adjuntar la imagen mediante el selector superior o con Ctrl+V.")
                 if st.button("💻 Importar código", key="btn_codigo", use_container_width=True):
                     st.toast("Pegue el bloque de código en la consulta técnica.")
                 if st.button("📓 Notebook (.ipynb)", key="btn_notebook", use_container_width=True):
@@ -1700,14 +2036,7 @@ if vista == "chat":
             st.session_state["modelo_ia_seleccionado"] = "Flash" if "Flash" in modelo_activo_sel else "Pro"
 
         with c_mic:
-            st.markdown(
-                """
-                <button id="btn-mic-main" class="btn-accion-redonda" title="Dictar consulta por voz" onclick="window.parent.alternarDictadoMicrofono()">
-                    🎤
-                </button>
-                """,
-                unsafe_allow_html=True
-            )
+            renderizar_motor_microfono_directo()
 
         with c_send:
             btn_enviar_click = st.button("➤", key="btn_enviar_prompt", use_container_width=True)
