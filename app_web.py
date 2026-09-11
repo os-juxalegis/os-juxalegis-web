@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # JUXALEGIS OS - APP WEB COMPLETA (UNIFICADA CON BASE DE DATOS LOCAL, RUTAS Y VOZ)
-# INTEGRACIÓN: GOOGLE GEMINI 2.5 + GOOGLE SEARCH GROUNDING + FILES API NATIVA
+# INTEGRACIÓN REPARADA: GOOGLE GEMINI + GOOGLE SEARCH NATIVO + PERSISTENCIA TOTAL
 # ------------------------------------------------------------------------------
 
 import streamlit as st
@@ -657,12 +657,6 @@ if "modelo_ia_seleccionado" not in st.session_state:
 if "audio_text_to_speak" not in st.session_state:
     st.session_state.audio_text_to_speak = ""
 
-if "pending_message" not in st.session_state:
-    st.session_state["pending_message"] = ""
-
-if "input_consulta_usuario" not in st.session_state:
-    st.session_state["input_consulta_usuario"] = ""
-
 # ----------------- CONTROL DE ACCESO (LOGIN) -----------------
 if not st.session_state.autenticado:
     col1, col2, col3 = st.columns([1, 1.8, 1])
@@ -981,7 +975,7 @@ if vista == "chat":
     chat_container = st.container()
 
     with chat_container:
-        if not has_messages and not st.session_state.get("pending_message"):
+        if not has_messages:
             st.markdown(f"""
                 <div class="hero-empty-container">
                     <h1 class="greeting-header">¿En qué puedo ayudarte hoy, <span class="greeting-name">{user_name}</span>?</h1>
@@ -1003,27 +997,7 @@ if vista == "chat":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    def procesar_envio_mensaje():
-        texto = st.session_state.input_consulta_usuario
-        if texto and texto.strip():
-            st.session_state["pending_message"] = texto.strip()
-            st.session_state["input_consulta_usuario"] = ""
-
-    col_texto, col_btn_send, col_btn_voice, col_selector = st.columns([0.70, 0.07, 0.14, 0.09])
-
-    with col_texto:
-        texto_ingresado = st.text_area(
-            label=f"Preguntarle a {alias_display}...",
-            placeholder=f"Escriba aquí su consulta para {alias_display} (puede expandir este cuadro)...",
-            height=70,
-            label_visibility="collapsed",
-            key="input_consulta_usuario",
-            on_change=procesar_envio_mensaje 
-        )
-
-    with col_btn_send:
-        boton_enviar = st.button("➤", help="Enviar consulta", key="btn_enviar_msg", use_container_width=True, on_click=procesar_envio_mensaje)
-
+    col_btn_voice, col_selector = st.columns([0.85, 0.15])
     with col_btn_voice:
         voice_html = """
         <!DOCTYPE html>
@@ -1032,17 +1006,17 @@ if vista == "chat":
         <style>
             body { margin: 0; padding: 0; display: flex; gap: 8px; background: transparent; }
             .btn { 
-                flex: 1; 
                 background-color: #242D33; 
                 color: #E1E6EB; 
                 border: 1px solid #DCA48A; 
                 border-radius: 4px; 
-                height: 43px; 
+                height: 38px; 
+                padding: 0 16px;
                 display: flex; 
                 align-items: center; 
                 justify-content: center; 
                 cursor: pointer; 
-                font-size: 1.1rem;
+                font-size: 1rem;
                 transition: all 0.2s;
             }
             .btn:hover { background-color: #DCA48A; color: #1B2226; border-color: #DCA48A; }
@@ -1050,8 +1024,8 @@ if vista == "chat":
         </style>
         </head>
         <body>
-            <button id="btnMic" class="btn" title="Iniciar micrófono">🎙️</button>
-            <button id="btnStop" class="btn" title="Detener micrófono">⏹️</button>
+            <button id="btnMic" class="btn" title="Iniciar micrófono">🎙️ Dictar consulta</button>
+            <button id="btnStop" class="btn" title="Detener micrófono">⏹️ Detener</button>
             
             <script>
                 var recognizer = null;
@@ -1093,7 +1067,7 @@ if vista == "chat":
         </body>
         </html>
         """
-        components.html(voice_html, height=45)
+        components.html(voice_html, height=42)
 
     with col_selector:
         modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
@@ -1106,83 +1080,70 @@ if vista == "chat":
                 st.session_state["modelo_ia_seleccionado"] = "Pro"
                 st.rerun()
 
-    user_prompt = st.session_state.pop("pending_message", "")
-    
-    if user_prompt:
-        prompt = user_prompt
+    # Input unificado y nativo de Streamlit (elimina cuelgues de estado)
+    prompt_usuario = st.chat_input(f"Escriba aquí su consulta para {alias_display}...")
+
+    if prompt_usuario:
         act_cuad_save = st.session_state.get("cuaderno_activo", "General")
         sess_id = st.session_state.get("current_session_id")
 
-        es_duplicado = False
-        if st.session_state.get("messages") and len(st.session_state["messages"]) > 0:
-            last_msg = st.session_state["messages"][-1]
-            if last_msg["role"] == "user" and last_msg["content"] == prompt:
-                es_duplicado = True
+        crear_o_actualizar_sesion_db(sess_id, prompt_usuario, act_cuad_save)
+        guardar_mensaje_db(sess_id, "user", prompt_usuario, act_cuad_save)
+        st.session_state["messages"].append({"role": "user", "content": prompt_usuario})
 
-        if not es_duplicado:
-            crear_o_actualizar_sesion_db(sess_id, prompt, act_cuad_save)
-            guardar_mensaje_db(sess_id, "user", prompt, act_cuad_save)
-            st.session_state["messages"].append({"role": "user", "content": prompt})
+        with chat_container:
+            with st.chat_message("user", avatar=None):
+                st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{prompt_usuario}", unsafe_allow_html=True)
 
-            with chat_container:
-                with st.chat_message("user", avatar=None):
-                    st.markdown(f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{prompt}", unsafe_allow_html=True)
+            with st.chat_message("assistant", avatar=None):
+                st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
+                contenedor_respuesta = st.empty()
 
-                with st.chat_message("assistant", avatar=None):
-                    st.markdown(f"<span style='color: #89CFF0; font-weight: 800; letter-spacing: 0.5px;'>{alias_display.upper()}:</span>", unsafe_allow_html=True)
-                    contenedor_respuesta = st.empty()
+        respuesta_completa = ""
 
-            respuesta_completa = ""
+        if GEMINI_API_KEY:
+            try:
+                client = genai.Client(api_key=GEMINI_API_KEY)
+                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
+                system_prompt = (
+                    f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
+                    f"Estás operando en el cuaderno web '{act_cuad_save}' "
+                    f"con las fuentes documentales: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+                )
 
-            if GEMINI_API_KEY:
-                try:
-                    client = genai.Client(api_key=GEMINI_API_KEY)
-                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
-                    system_prompt = (
-                        f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
-                        f"Estás operando en el cuaderno web '{act_cuad_save}' "
-                        f"con las fuentes documentales: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-                    )
+                engine_target = "gemini-2.5-flash" if st.session_state.get("modelo_ia_seleccionado") == "Flash" else "gemini-2.5-pro"
 
-                    # Selección dinámica de modelo oficial de Google Gemini
-                    engine_target = "gemini-2.5-flash" if st.session_state.get("modelo_ia_seleccionado") == "Flash" else "gemini-2.5-pro"
+                configuracion_con_web = types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    tools=[types.Tool(google_search=types.GoogleSearch())],
+                    temperature=0.3,
+                )
 
-                    configuracion_con_web = types.GenerateContentConfig(
-                        system_instruction=system_prompt,
-                        # Activa búsqueda web nativa en Google en tiempo real
-                        tools=[types.Tool(google_search=types.GoogleSearch())],
-                        temperature=0.3,
-                    )
+                archivos_adjuntos = st.session_state.archivos_gemini_obj.get(act_cuad_save, [])
+                if archivos_adjuntos:
+                    payload = list(archivos_adjuntos) + [prompt_usuario]
+                else:
+                    payload = prompt_usuario
 
-                    # Armado del payload: libros/expedientes cargados en memoria + mensaje
-                    archivos_adjuntos = st.session_state.archivos_gemini_obj.get(act_cuad_save, [])
-                    if archivos_adjuntos:
-                        payload = list(archivos_adjuntos) + [prompt]
-                    else:
-                        payload = prompt
-
-                    response_stream = client.models.generate_content_stream(
+                with st.spinner(f"{alias_display} está procesando y consultando fuentes..."):
+                    # Generación robusta con búsqueda web activa
+                    response = client.models.generate_content(
                         model=engine_target,
                         contents=payload,
                         config=configuracion_con_web,
                     )
+                    respuesta_completa = response.text or "He recibido la información pero no obtuve salida de texto."
 
-                    for chunk in response_stream:
-                        if chunk.text:
-                            respuesta_completa += chunk.text
-                            contenedor_respuesta.markdown(respuesta_completa + "▌")
-
-                    contenedor_respuesta.markdown(respuesta_completa)
-                except Exception as e_mod:
-                    respuesta_completa = f"⚠️ Detalle de enlace con Gemini: {str(e_mod)}"
-                    contenedor_respuesta.markdown(respuesta_completa)
-            else:
-                respuesta_completa = "⚠️ La clave de API (GEMINI_API_KEY) no se encuentra configurada en los Secrets."
                 contenedor_respuesta.markdown(respuesta_completa)
+            except Exception as e_mod:
+                respuesta_completa = f"⚠️ Detalle de enlace con Gemini: {str(e_mod)}"
+                contenedor_respuesta.markdown(respuesta_completa)
+        else:
+            respuesta_completa = "⚠️ La clave de API (GEMINI_API_KEY) no se encuentra configurada en los Secrets de Streamlit."
+            contenedor_respuesta.markdown(respuesta_completa)
 
-            guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad_save)
-            st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
-            st.rerun()
+        guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad_save)
+        st.session_state["messages"].append({"role": "assistant", "content": respuesta_completa})
 
 # ----------------- OTRAS VISTAS DEL SISTEMA -----------------
 elif vista == "buscar_chats":
@@ -1225,7 +1186,7 @@ elif vista == "ver_cuaderno":
     
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT session_id, titulo, ultima_actividad FROM sesiones WHERE cuaderno = ? ORDER BY融 ultima_actividad DESC", (cuaderno,))
+    c.execute("SELECT session_id, titulo, ultima_actividad FROM sesiones WHERE cuaderno = ? ORDER BY ultima_actividad DESC", (cuaderno,))
     hilos_cuaderno = c.fetchall()
     conn.close()
 
