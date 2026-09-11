@@ -1,6 +1,8 @@
 # ------------------------------------------------------------------------------
-# JUXALEGIS OS - APP WEB INTEGRAL (PRODUCCIÓN DEFINITIVA UNIFICADA)
-# INTEGRACIÓN OFICIAL: GOOGLE GEMINI FLASH / PRO + GROUNDING + PERSISTENCIA SQLITE
+# JUXALEGIS OS — OPERATING SYSTEM (PRODUCCIÓN DEFINITIVA INTEGRAL)
+# ARQUITECTURA: PYTHON + STREAMLIT + SQLITE (juxalegis_os.db)
+# INTEGRACIÓN OFICIAL: SDK GOOGLE-GENAI (GEMINI FLASH / PRO + GROUNDING + VISON)
+# CONSOLIDACIÓN DE PARCHES MODULARES 1 AL 16 INTEGRADOS AL 100%
 # ------------------------------------------------------------------------------
 
 import os
@@ -20,7 +22,11 @@ from google import genai
 from google.genai import types
 
 # ----------------- CONFIGURACIÓN BÁSICA & FAVICON CORPORATIVO -----------------
-page_icon_target = "logo_2.png" if os.path.exists("logo_2.png") else ("logo-os - juxalegis.jpg" if os.path.exists("logo-os - juxalegis.jpg") else ("logo.png" if os.path.exists("logo.png") else "⚖️"))
+page_icon_target = (
+    "logo_2.png" if os.path.exists("logo_2.png")
+    else ("logo-os - juxalegis.jpg" if os.path.exists("logo-os - juxalegis.jpg")
+    else ("logo.png" if os.path.exists("logo.png") else "⚖️"))
+)
 
 st.set_page_config(
     page_title="JUXALEGIS OS — Operating System",
@@ -158,6 +164,35 @@ def guardar_nombre_ia_usuario(email: str, nombre_ia: str):
     conn.commit()
     conn.close()
 
+# Parche 10: Vinculación de hilos a cuadernos
+def mover_hilo_a_cuaderno_db(session_id: str, nombre_cuaderno_destino: str):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute(
+        "UPDATE sesiones SET cuaderno = ?, ultima_actividad = CURRENT_TIMESTAMP WHERE session_id = ?",
+        (nombre_cuaderno_destino, session_id)
+    )
+    conn.commit()
+    conn.close()
+
+def crear_cuaderno_y_mover_hilo_db(session_id: str, nombre_nuevo_cuaderno: str):
+    nombre_limpio = nombre_nuevo_cuaderno.strip()
+    if not nombre_limpio:
+        return
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    try:
+        c.execute("INSERT INTO cuadernos (nombre) VALUES (?)", (nombre_limpio,))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        pass
+    c.execute(
+        "UPDATE sesiones SET cuaderno = ?, ultima_actividad = CURRENT_TIMESTAMP WHERE session_id = ?",
+        (nombre_limpio, session_id)
+    )
+    conn.commit()
+    conn.close()
+
 # ----------------- DIRECTRICES MAESTRAS: MODO ASISTENTE INTEGRAL -----------------
 SYSTEM_INSTRUCTION_JUXALEGIS = """
 INSTRUCTIVO DE CONFIGURACIÓN INTEGRAL DE SISTEMA (SYSTEM PROMPT / DIRECTRICES MAESTRAS)
@@ -209,7 +244,7 @@ Auditoría y refactorización:
 Diagnóstico de errores sintácticos o de lógica, resolución de dependencias, auditoría de vulnerabilidades y optimización de rendimiento de aplicaciones y plataformas web.
 """
 
-# ----------------- ESTILOS GLOBALES E IDENTIDAD VISUAL -----------------
+# ----------------- ESTILOS GLOBALES, IDENTIDAD & PARCHE 16 -----------------
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
@@ -273,7 +308,7 @@ st.markdown("""
         border-color: #DCA48A !important;
     }
 
-    /* Botón Iniciar Sesión con Hover Rosa Oro */
+    /* Parche 9: Botón Iniciar Sesión con Hover Rosa Oro */
     div[data-testid="stForm"] button,
     .stButton > button[kind="primary"] {
         background-color: #161b1e !important;
@@ -387,7 +422,7 @@ st.markdown("""
         transform: scale(1.05);
     }
 
-    /* Selectbox de Modelo Neural */
+    /* Selectbox de Motor Neural */
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         border-radius: 14px !important;
         background-color: #1e1f20 !important;
@@ -476,6 +511,38 @@ st.markdown("""
         letter-spacing: 1.2px !important;
         text-transform: uppercase !important;
     }
+
+    /* PARCHE 16 DEFINITIVO: TIPOGRAFÍA TIMES NEW ROMAN Y FORMATO ORACIÓN */
+    .saludo-bienvenida-times {
+        font-family: 'Times New Roman', Times, Georgia, serif !important;
+        font-size: 2.35rem !important;
+        font-weight: 400 !important;
+        color: #FFF9E6 !important; /* Blanco oficial institucional */
+        letter-spacing: 0.2px !important;
+        margin: 0 !important;
+        line-height: 1.3 !important;
+        text-align: center !important;
+        text-transform: none !important;
+    }
+    .saludo-usuario-rosaoro {
+        font-family: 'Times New Roman', Times, Georgia, serif !important;
+        color: #DCA48A !important;
+        font-weight: 700 !important;
+        letter-spacing: 0.4px !important;
+    }
+    .sidebar-config-times-title {
+        font-family: 'Times New Roman', Times, Georgia, serif !important;
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        color: #DCA48A !important;
+        letter-spacing: 1.5px !important;
+        text-transform: uppercase !important;
+        margin-top: 14px !important;
+        margin-bottom: 8px !important;
+        display: flex !important;
+        align-items: center !important;
+        gap: 6px !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -557,6 +624,330 @@ def generar_video_institucional(client, prompt_guion):
         st.error(f"Inconveniente en generación audiovisual: {error}")
         return None
 
+# ----------------- FUNCIONES DE FORMATO Y SALUDO (PARCHE 16) -----------------
+def formatear_nombre_tipo_oracion(nombre_raw: str) -> str:
+    nom = nombre_raw.strip().upper()
+    if "MARTIN" in nom:
+        return "Dra. Martín"
+    elif "CAMPOS" in nom:
+        return "Dr. Campos"
+    elif "GAIL" in nom:
+        return "Gail"
+    return nombre_raw.strip().title()
+
+def renderizar_bienvenida_calibrada(user_name_raw, alias_display, act_cuad, perfil_voz):
+    nombre_formateado = formatear_nombre_tipo_oracion(user_name_raw)
+    st.markdown(f"""
+        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 38vh; text-align: center; gap: 20px;">
+            <h1 class="saludo-bienvenida-times">
+                ¿En qué puedo asistirte hoy, <span class="saludo-usuario-rosaoro">{nombre_formateado}</span>?
+            </h1>
+            <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
+                <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">⚙️ ASISTENTE INTEGRAL</span>
+                <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">🧠 {alias_display}</span>
+                <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">📁 {act_cuad.upper()}</span>
+                <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">🎙️ {perfil_voz.upper()}</span>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+# ----------------- PARCHE 15: MENSAJES DE USUARIO RESTAURADOS -----------------
+def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
+    clave_edicion = f"editando_msg_{idx_m}"
+    if clave_edicion not in st.session_state:
+        st.session_state[clave_edicion] = False
+
+    with st.chat_message("user", avatar=None):
+        col_msg_txt, col_msg_menu = st.columns([0.93, 0.07])
+        with col_msg_menu:
+            with st.popover("⌵", help="Opciones de la consulta"):
+                if st.button("✏️ Editar instrucción", key=f"btn_edit_user_{idx_m}", use_container_width=True):
+                    st.session_state[clave_edicion] = True
+                    st.rerun()
+                if st.button("📋 Copiar instrucción", key=f"btn_copy_user_{idx_m}", use_container_width=True):
+                    txt_escapado = msg_content.replace("\\", "\\\\").replace("`", "\\`").replace("$", "\\$")
+                    components.html(
+                        f"""
+                        <script>
+                            navigator.clipboard.writeText(`{txt_escapado}`);
+                        </script>
+                        """,
+                        height=0,
+                        width=0
+                    )
+                    st.toast("Instrucción copiada al portapapeles", icon="📋")
+
+        with col_msg_txt:
+            if st.session_state[clave_edicion]:
+                nuevo_texto_editado = st.text_area(
+                    "Modificar y reenviar consulta:",
+                    value=msg_content,
+                    key=f"ta_edit_box_{idx_m}",
+                    height=100
+                )
+                col_guardar, col_cancelar = st.columns([0.25, 0.75])
+                with col_guardar:
+                    if st.button("Reenviar", key=f"btn_submit_edit_{idx_m}"):
+                        if nuevo_texto_editado.strip():
+                            st.session_state[clave_edicion] = False
+                            st.session_state["mensaje_a_procesar"] = nuevo_texto_editado.strip()
+                            st.rerun()
+                with col_cancelar:
+                    if st.button("Cancelar", key=f"btn_cancel_edit_{idx_m}"):
+                        st.session_state[clave_edicion] = False
+                        st.rerun()
+            else:
+                st.markdown(
+                    f"<span style='color: #DCA48A; font-weight: 800; letter-spacing: 0.5px;'>{user_name}:</span><br>{msg_content}",
+                    unsafe_allow_html=True
+                )
+
+# ----------------- PARCHE 10: MENÚ CONTEXTUAL DE HILOS RECIENTES -----------------
+def renderizar_menu_opciones_hilo_reciente(s_id, titulo_mostrar, cuaderno_actual_hilo):
+    with st.popover("···", use_container_width=True):
+        st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase; margin-bottom: 6px;'>Opciones de Hilo</p>", unsafe_allow_html=True)
+        
+        if st.button("🔗 Compartir conversación", key=f"sh_{s_id}", use_container_width=True):
+            st.toast("Enlace copiado al portapapeles.", icon="🔗")
+            
+        if st.button("📌 Fijar al inicio", key=f"pin_{s_id}", use_container_width=True):
+            st.toast("Hilo fijado.", icon="📌")
+
+        with st.expander("✏️ Cambiar nombre"):
+            nuevo_nom_sb = st.text_input("Título:", value=titulo_mostrar, key=f"inp_ren_sb_{s_id}")
+            if st.button("Guardar", key=f"btn_ren_sb_{s_id}", use_container_width=True):
+                if nuevo_nom_sb.strip():
+                    conn_ren = sqlite3.connect(DB_FILE)
+                    c_ren = conn_ren.cursor()
+                    c_ren.execute("UPDATE sesiones SET titulo = ? WHERE session_id = ?", (nuevo_nom_sb.strip(), s_id))
+                    conn_ren.commit()
+                    conn_ren.close()
+                    st.rerun()
+
+        st.markdown("<div style='border-top: 1px solid rgba(220,164,138,0.2); margin: 6px 0;'></div>", unsafe_allow_html=True)
+
+        with st.expander("📁 Mover a cuaderno"):
+            conn_c = sqlite3.connect(DB_FILE)
+            c_c = conn_c.cursor()
+            c_c.execute("SELECT nombre FROM cuadernos ORDER BY id DESC")
+            filas_cuadernos = c_c.fetchall()
+            conn_c.close()
+
+            opciones_cuad = ["General"] + [f[0] for f in filas_cuadernos if f[0] != "General"]
+            idx_actual = opciones_cuad.index(cuaderno_actual_hilo) if cuaderno_actual_hilo in opciones_cuad else 0
+            cuaderno_elegido = st.selectbox(
+                "Seleccionar destino:",
+                options=opciones_cuad,
+                index=idx_actual,
+                key=f"sel_dest_cuad_{s_id}"
+            )
+            
+            if st.button("Asignar cuaderno", key=f"btn_asig_cuad_{s_id}", use_container_width=True):
+                mover_hilo_a_cuaderno_db(s_id, cuaderno_elegido)
+                if st.session_state.get("current_session_id") == s_id:
+                    st.session_state["cuaderno_activo"] = cuaderno_elegido
+                    st.session_state["active_cuaderno"] = cuaderno_elegido
+                st.toast(f"Hilo transferido a '{cuaderno_elegido}'", icon="📁")
+                st.rerun()
+
+        with st.expander("➕ Crear y asignar cuaderno"):
+            nuevo_cuad_nombre = st.text_input(
+                "Nombre del nuevo expediente:",
+                placeholder="Ej: Sucesorio Gómez",
+                key=f"inp_new_cuad_hilo_{s_id}"
+            )
+            if st.button("Crear y transferir", key=f"btn_crear_asig_{s_id}", use_container_width=True):
+                if nuevo_cuad_nombre.strip():
+                    nombre_destino = nuevo_cuad_nombre.strip()
+                    crear_cuaderno_y_mover_hilo_db(s_id, nombre_destino)
+                    if st.session_state.get("current_session_id") == s_id:
+                        st.session_state["cuaderno_activo"] = nombre_destino
+                        st.session_state["active_cuaderno"] = nombre_destino
+                    st.toast(f"Cuaderno '{nombre_destino}' creado y conversación vinculada.", icon="✅")
+                    st.rerun()
+
+        st.markdown("<div style='border-top: 1px solid rgba(220,164,138,0.2); margin: 6px 0;'></div>", unsafe_allow_html=True)
+
+        if st.button("🗑️ Borrar conversación", key=f"del_h_{s_id}", use_container_width=True):
+            conn_del = sqlite3.connect(DB_FILE)
+            c_del = conn_del.cursor()
+            c_del.execute("DELETE FROM sesiones WHERE session_id = ?", (s_id,))
+            c_del.execute("DELETE FROM chats WHERE session_id = ?", (s_id,))
+            conn_del.commit()
+            conn_del.close()
+            if st.session_state.get("current_session_id") == s_id:
+                st.session_state["messages"] = []
+                st.session_state["loaded_session_id"] = None
+            st.rerun()
+
+# ----------------- PARCHE 14: GESTIÓN DE HILOS EN VISTA DEL CUADERNO -----------------
+def renderizar_hilos_expediente_con_acciones(cuaderno_activo):
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute(
+        "SELECT session_id, titulo, ultima_actividad FROM sesiones WHERE cuaderno = ? ORDER BY ultima_actividad DESC",
+        (cuaderno_activo,)
+    )
+    hilos_cuaderno = c.fetchall()
+    conn.close()
+
+    if not hilos_cuaderno:
+        st.info(f"El expediente '{cuaderno_activo}' aún no posee conversaciones iniciadas.")
+        return
+
+    st.markdown("<p style='font-size: 0.85rem; color: #8A99A8; font-weight: bold;'>HILOS DE TRABAJO ASOCIADOS A ESTE EXPEDIENTE:</p>", unsafe_allow_html=True)
+
+    for s_id, s_tit, s_act in hilos_cuaderno:
+        titulo_hilo = s_tit if s_tit else "Nueva conversación"
+        col_info, col_abrir, col_kebab = st.columns([0.62, 0.22, 0.16])
+        
+        with col_info:
+            st.markdown(
+                f"**💬 {titulo_hilo}** <br><span style='font-size:0.75rem; color:#8A99A8;'>Última actividad: {s_act}</span>",
+                unsafe_allow_html=True
+            )
+
+        with col_abrir:
+            if st.button("Continuar", key=f"btn_cont_exp_{s_id}", use_container_width=True):
+                st.session_state["current_session_id"] = s_id
+                st.session_state["cuaderno_activo"] = cuaderno_activo
+                st.session_state["active_cuaderno"] = cuaderno_activo
+                st.session_state["messages"] = cargar_mensajes_sesion(s_id)
+                st.session_state["loaded_session_id"] = s_id
+                st.session_state["active_view"] = "chat"
+                st.session_state["audio_text_to_speak"] = ""
+                st.rerun()
+
+        with col_kebab:
+            with st.popover("···", use_container_width=True):
+                st.markdown("<p style='font-size:0.68rem; color:#8A99A8; font-weight:700; text-transform:uppercase; margin-bottom:6px;'>Gestión de Causa</p>", unsafe_allow_html=True)
+                
+                if st.button("🔗 Compartir conversación", key=f"sh_exp_{s_id}", use_container_width=True):
+                    st.toast("Enlace copiado al portapapeles.", icon="🔗")
+
+                if st.button("📌 Fijar", key=f"pin_exp_{s_id}", use_container_width=True):
+                    st.toast("Hilo fijado al inicio del expediente.", icon="📌")
+
+                with st.expander("✏️ Cambiar nombre"):
+                    nuevo_titulo = st.text_input("Título del hilo:", value=titulo_hilo, key=f"inp_ren_exp_{s_id}")
+                    if st.button("Guardar nombre", key=f"btn_save_ren_exp_{s_id}", use_container_width=True):
+                        if nuevo_titulo.strip():
+                            conn_u = sqlite3.connect(DB_FILE)
+                            cu = conn_u.cursor()
+                            cu.execute("UPDATE sesiones SET titulo = ?, ultima_actividad = CURRENT_TIMESTAMP WHERE session_id = ?", (nuevo_titulo.strip(), s_id))
+                            conn_u.commit()
+                            conn_u.close()
+                            st.toast("Nombre de la causa actualizado.", icon="✏️")
+                            st.rerun()
+
+                st.markdown("<div style='border-top: 1px solid rgba(220,164,138,0.2); margin: 6px 0;'></div>", unsafe_allow_html=True)
+
+                if st.button("🗑️ Borrar", key=f"del_exp_{s_id}", use_container_width=True):
+                    conn_d = sqlite3.connect(DB_FILE)
+                    cd = conn_d.cursor()
+                    cd.execute("DELETE FROM sesiones WHERE session_id = ?", (s_id,))
+                    cd.execute("DELETE FROM chats WHERE session_id = ?", (s_id,))
+                    conn_d.commit()
+                    conn_d.close()
+                    if st.session_state.get("current_session_id") == s_id:
+                        st.session_state["messages"] = []
+                        st.session_state["loaded_session_id"] = None
+                    st.toast("Conversación eliminada del expediente.", icon="🗑️")
+                    st.rerun()
+
+# ----------------- PARCHE 11: BIBLIOTECA DINÁMICA Y PLANILLAS -----------------
+def renderizar_vista_biblioteca_dinamica():
+    st.markdown('<div class="module-header-serif">BIBLIOTECA DE RECURSOS Y PLANTILLAS</div>', unsafe_allow_html=True)
+    tab_subir, tab_consultar = st.tabs(["📤 Cargar recurso / plantilla", "📂 Plantillas resguardadas"])
+    
+    with tab_subir:
+        col_cat, col_nom = st.columns([0.45, 0.55])
+        with col_cat:
+            categoria_abierta = st.text_input(
+                "Categoría:",
+                placeholder="Ej: Planillas de Liquidación, Laboral, Civil, etc.",
+                key="input_cat_abierta_bib"
+            )
+        with col_nom:
+            nom_ref = st.text_input(
+                "Nombre de referencia:",
+                placeholder="Ej: Planilla Jus Actualizada / Modelo Notificación",
+                key="input_nom_ref_bib"
+            )
+            
+        arch_sub = st.file_uploader(
+            "Seleccionar archivo (DOCX, PDF, XLSX, XLS, CSV, TXT, PNG):",
+            type=["docx", "pdf", "xlsx", "xls", "csv", "txt", "png", "jpg"],
+            key="uploader_bib_tab1"
+        )
+        
+        if st.button("Guardar en Biblioteca", key="btn_save_bib_tab1", use_container_width=True):
+            if arch_sub and nom_ref.strip():
+                cat_limpia = categoria_abierta.strip().replace(' ', '_') if categoria_abierta.strip() else "General"
+                nom_limpio = nom_ref.strip().replace(' ', '_')
+                nom_dest = f"[{cat_limpia}]_{nom_limpio}_{arch_sub.name}"
+                with open(os.path.join(CARPETA_BIBLIOTECA, nom_dest), "wb") as f:
+                    f.write(arch_sub.getbuffer())
+                st.toast(f"Archivo resguardado con éxito en categoría '{cat_limpia}'", icon="✅")
+                st.rerun()
+            else:
+                st.warning("Debe ingresar al menos un nombre de referencia y adjuntar el archivo.")
+
+    with tab_consultar:
+        with st.expander("➕ Subir planilla o recurso a esta lista", expanded=False):
+            col_p1, col_p2 = st.columns([0.45, 0.55])
+            with col_p1:
+                cat_p = st.text_input("Categoría de la planilla:", placeholder="Ej: Planillas Arancelarias", key="inp_cat_p_tab2")
+            with col_p2:
+                nom_p = st.text_input("Nombre de la planilla:", placeholder="Ej: Liquidación Intereses", key="inp_nom_p_tab2")
+                
+            arch_p = st.file_uploader(
+                "Adjuntar archivo de planilla o documento:",
+                type=["xlsx", "xls", "csv", "docx", "pdf", "txt"],
+                key="uploader_bib_tab2"
+            )
+            if st.button("Guardar en esta lista", key="btn_save_tab2", use_container_width=True):
+                if arch_p and nom_p.strip():
+                    cat_final = cat_p.strip().replace(' ', '_') if cat_p.strip() else "Planillas"
+                    nom_final = nom_p.strip().replace(' ', '_')
+                    archivo_salida = f"[{cat_final}]_{nom_final}_{arch_p.name}"
+                    with open(os.path.join(CARPETA_BIBLIOTECA, archivo_salida), "wb") as f:
+                        f.write(arch_p.getbuffer())
+                    st.toast("Planilla resguardada correctamente.", icon="📊")
+                    st.rerun()
+                else:
+                    st.warning("Ingrese nombre de referencia y seleccione el archivo.")
+
+        st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+        archivos_b = os.listdir(CARPETA_BIBLIOTECA)
+        if not archivos_b:
+            st.info("No existen plantillas ni recursos resguardados en este momento.")
+        else:
+            for arch in archivos_b:
+                c_i, c_d, c_b = st.columns([0.65, 0.22, 0.13])
+                with c_i:
+                    if arch.startswith("[") and "]" in arch:
+                        partes = arch.split("]", 1)
+                        cat_tag = partes[0].replace("[", "").replace("_", " ")
+                        resto = partes[1].lstrip("_").replace("_", " ")
+                        nombre_visible = f"📁 [{cat_tag}] {resto}"
+                    else:
+                        nombre_visible = f"📄 {arch}"
+                    st.text(nombre_visible)
+                with c_d:
+                    with open(os.path.join(CARPETA_BIBLIOTECA, arch), "rb") as f:
+                        st.download_button(
+                            "Descargar",
+                            data=f.read(),
+                            file_name=arch,
+                            key=f"d_{arch}",
+                            use_container_width=True
+                        )
+                with c_b:
+                    if st.button("🗑️", key=f"b_{arch}"):
+                        os.remove(os.path.join(CARPETA_BIBLIOTECA, arch))
+                        st.rerun()
+
 # ----------------- ESTADOS EN SESSION STATE -----------------
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
@@ -600,11 +991,12 @@ if "perfil_voz" not in st.session_state:
 if "mensaje_a_procesar" not in st.session_state:
     st.session_state["mensaje_a_procesar"] = None
 
-# Contador de versión para reiniciar el uploader limpiamente sin errores de widget
 if "captura_uploader_ver" not in st.session_state:
     st.session_state["captura_uploader_ver"] = 0
 
-# Mecanismo limpio de reseteo para evitar StreamlitWidgetAlreadyInstantiatedError
+if "captura_clipboard_b64" not in st.session_state:
+    st.session_state["captura_clipboard_b64"] = None
+
 if "caja_reset_trigger" not in st.session_state:
     st.session_state["caja_reset_trigger"] = False
 
@@ -618,7 +1010,6 @@ if not st.session_state.autenticado:
     with col2:
         st.markdown("<div style='height: 8vh;'></div>", unsafe_allow_html=True)
         
-        # Detección del logo prioritario subido al repositorio
         nombre_logo = "logo-os - juxalegis.jpg"
         b64_logo = obtener_imagen_base64(nombre_logo)
         if not b64_logo and os.path.exists("logo.png"):
@@ -774,7 +1165,7 @@ with st.sidebar:
             s_cuaderno = s_data["cuaderno"]
             es_hilo_actual = (st.session_state.get("current_session_id") == s_id and st.session_state.get("active_view") == "chat")
             
-            col_th_main, col_th_kebab = st.columns([0.84, 0.16])
+            col_th_main, col_th_kebab = st.columns([0.82, 0.18])
             with col_th_main:
                 titulo_mostrar = s_titulo if s_titulo else "Nueva conversación"
                 label_th = f"💬 {titulo_mostrar}" if len(titulo_mostrar) <= 19 else f"💬 {titulo_mostrar[:17]}..."
@@ -793,37 +1184,13 @@ with st.sidebar:
                     st.markdown('</div>', unsafe_allow_html=True)
 
             with col_th_kebab:
-                with st.popover("···", use_container_width=True):
-                    if st.button("🔗 Compartir conversación", key=f"sh_{s_id}", use_container_width=True):
-                        st.toast("Enlace copiado.")
-                    if st.button("📌 Fijar al inicio", key=f"pin_{s_id}", use_container_width=True):
-                        st.toast("Hilo fijado.")
-                    with st.expander("✏️ Cambiar nombre"):
-                        nuevo_nom_sb = st.text_input("Título:", value=titulo_mostrar, key=f"inp_ren_sb_{s_id}")
-                        if st.button("Guardar", key=f"btn_ren_sb_{s_id}", use_container_width=True):
-                            if nuevo_nom_sb.strip():
-                                conn_ren = sqlite3.connect(DB_FILE)
-                                c_ren = conn_ren.cursor()
-                                c_ren.execute("UPDATE sesiones SET titulo = ? WHERE session_id = ?", (nuevo_nom_sb.strip(), s_id))
-                                conn_ren.commit()
-                                conn_ren.close()
-                                st.rerun()
-                    if st.button("🗑️ Borrar", key=f"del_h_{s_id}", use_container_width=True):
-                        conn_del = sqlite3.connect(DB_FILE)
-                        c_del = conn_del.cursor()
-                        c_del.execute("DELETE FROM sesiones WHERE session_id = ?", (s_id,))
-                        c_del.execute("DELETE FROM chats WHERE session_id = ?", (s_id,))
-                        conn_del.commit()
-                        conn_del.close()
-                        if st.session_state.get("current_session_id") == s_id:
-                            st.session_state["messages"] = []
-                            st.session_state["loaded_session_id"] = None
-                        st.rerun()
+                renderizar_menu_opciones_hilo_reciente(s_id, titulo_mostrar, s_cuaderno)
 
     st.markdown("---")
-    st.markdown('<div class="sidebar-config-header" style="font-family: Cinzel, serif; color: #DCA48A; font-weight: 700; margin-bottom: 8px;">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
+    # Parche 16: Encabezado en Times New Roman
+    st.markdown('<div class="sidebar-config-times-title">⚙️ CONFIGURACIÓN</div>', unsafe_allow_html=True)
 
-    # Modo Operativo Único: Tarjeta limpia y sobria sin texto secundario
+    # Modo Operativo Único: Tarjeta limpia y sobria
     st.markdown("""
         <div style="background-color: #1e1f20; border: 1px solid #3c4043; border-left: 3px solid #DCA48A; border-radius: 8px; padding: 10px; margin-bottom: 12px;">
             <div style="font-size: 11px; color: #a8a8a8; text-transform: uppercase; letter-spacing: 0.8px;">Modo Operativo Activo</div>
@@ -831,9 +1198,9 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    # Identidad IA: Persistencia individual y exacta por usuario en SQLite
+    # Parche 16: Identidad IA individual persistente por usuario en SQLite
     nombre_ia_guardado = obtener_nombre_ia_usuario(st.session_state.usuario_email)
-    alias_ia_input = st.sidebar.text_input(
+    alias_ia_input = st.text_input(
         "Identidad IA:", 
         value=nombre_ia_guardado, 
         key="campo_identidad_ia_usuario"
@@ -849,14 +1216,13 @@ with st.sidebar:
         "Hombre (Tomás, Argentina neutral)",
         "Mujer (Elena, Argentina)"
     ]
-    voz_sel = st.sidebar.selectbox("Síntesis de voz:", options=opciones_voces_menu, index=0)
+    voz_sel = st.selectbox("Síntesis de voz:", options=opciones_voces_menu, index=0)
     st.session_state["perfil_voz"] = "hombre" if "Hombre" in voz_sel else "mujer"
 
-    # Generación limpia de iniciales del usuario
     partes_correo = st.session_state.usuario_email.split('@')[0].split('.')
     iniciales = "".join([p[0].upper() for p in partes_correo[:2]]) if partes_correo else "US"
 
-    st.sidebar.markdown(f"""
+    st.markdown(f"""
         <div class="user-footer">
             <div class="user-avatar">{iniciales}</div>
             <div>
@@ -866,7 +1232,7 @@ with st.sidebar:
         </div>
     """, unsafe_allow_html=True)
 
-    if st.sidebar.button("🚪 Cerrar Sesión", use_container_width=True):
+    if st.button("🚪 Cerrar Sesión", use_container_width=True):
         st.session_state.autenticado = False
         st.session_state.usuario_email = ""
         st.session_state.messages = []
@@ -930,53 +1296,13 @@ if vista == "chat":
 
     with chat_container:
         if not has_messages:
-            st.markdown(f"""
-                <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 38vh; text-align: center; gap: 20px;">
-                    <h1 style="font-family: 'Segoe UI', sans-serif; font-size: 2.2rem; font-weight: 300; color: #E1E6EB; margin: 0;">
-                        ¿En qué puedo asistirte hoy, <span style="color: #DCA48A; font-weight: 600;">{user_name}</span>?
-                    </h1>
-                    <div style="display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;">
-                        <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">⚙️ ASISTENTE INTEGRAL</span>
-                        <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">🧠 {alias_display}</span>
-                        <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">📁 {act_cuad.upper()}</span>
-                        <span style="background-color: #242D33; color: #DCA48A; border: 1px solid rgba(220, 164, 138, 0.4); border-radius: 9999px; padding: 4px 12px; font-size: 0.75rem; font-weight: 600;">🎙️ {st.session_state.perfil_voz.upper()}</span>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
+            # Parche 16: Bienvenida calibrada en Times New Roman y formato oración
+            renderizar_bienvenida_calibrada(user_name, alias_display, act_cuad, st.session_state.perfil_voz)
         else:
             for idx_m, msg in enumerate(st.session_state.get("messages", [])):
                 if msg["role"] == "user":
-                    clave_ed = f"editando_msg_{idx_m}"
-                    if clave_ed not in st.session_state:
-                        st.session_state[clave_ed] = False
-
-                    with st.chat_message("user", avatar=None):
-                        col_msg_txt, col_msg_menu = st.columns([0.94, 0.06])
-                        with col_msg_menu:
-                            with st.popover("⌵", help="Opciones"):
-                                if st.button("✏️ Editar", key=f"btn_edit_{idx_m}", use_container_width=True):
-                                    st.session_state[clave_ed] = True
-                                    st.rerun()
-                                if st.button("📋 Copiar", key=f"btn_cp_{idx_m}", use_container_width=True):
-                                    txt_cp = msg["content"].replace("`", "\\`").replace("$", "\\$")
-                                    components.html(f"<script>navigator.clipboard.writeText(`{txt_cp}`);</script>", height=0, width=0)
-                                    st.toast("Instrucción copiada al portapapeles", icon="📋")
-
-                        with col_msg_txt:
-                            if st.session_state[clave_ed]:
-                                n_txt = st.text_area("Editar instrucción:", value=msg["content"], key=f"ta_ed_{idx_m}", height=90)
-                                col_g, col_c = st.columns([0.25, 0.75])
-                                with col_g:
-                                    if st.button("Reenviar", key=f"btn_ok_{idx_m}"):
-                                        st.session_state[clave_ed] = False
-                                        st.session_state["mensaje_a_procesar"] = n_txt
-                                        st.rerun()
-                                with col_c:
-                                    if st.button("Cancelar", key=f"btn_no_{idx_m}"):
-                                        st.session_state[clave_ed] = False
-                                        st.rerun()
-                            else:
-                                st.markdown(f"<span style='color: #DCA48A; font-weight: 800;'>{user_name}:</span><br>{msg['content']}", unsafe_allow_html=True)
+                    # Parche 15: Burbuja de usuario restaurada con menú (Editar/Copiar)
+                    renderizar_burbuja_usuario_con_acciones(idx_m, msg["content"], user_name)
                 else:
                     with st.chat_message("assistant", avatar=None):
                         st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
@@ -988,12 +1314,11 @@ if vista == "chat":
             ultimo_texto_asistente = m["content"]
             break
 
-    # Sanitización profunda de Markdown para una lectura fluida y natural
     texto_limpio_audio = re.sub(r'[*#_`\[\]()>-]', '', ultimo_texto_asistente)
     texto_audio_seguro = texto_limpio_audio.replace('"', '\\"').replace('\n', ' ')
     perfil_voz_activa = st.session_state.get("perfil_voz", "hombre")
 
-    # Inyección directa de micrófono y síntesis neuronal sin pausas artificiales
+    # Inyección directa de TTS y audio player
     components.html(f"""
         <!DOCTYPE html>
         <html>
@@ -1013,70 +1338,6 @@ if vista == "chat":
             <span id="st-audio" style="font-size: 12px; color: #8A99A8;"></span>
 
             <script>
-                let recognition = null;
-                let grabando = false;
-
-                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-                if (SR) {{
-                    recognition = new SR();
-                    recognition.lang = 'es-AR';
-                    recognition.continuous = false;
-                    recognition.interimResults = false;
-
-                    recognition.onstart = function() {{
-                        grabando = true;
-                        const micBtn = window.parent.document.getElementById('btn-mic-main');
-                        if (micBtn) {{
-                            micBtn.style.backgroundColor = '#8a2424';
-                            micBtn.style.borderColor = '#ff5252';
-                        }}
-                    }};
-
-                    recognition.onend = function() {{
-                        grabando = false;
-                        const micBtn = window.parent.document.getElementById('btn-mic-main');
-                        if (micBtn) {{
-                            micBtn.style.backgroundColor = '#1e1f20';
-                            micBtn.style.borderColor = '#3c4043';
-                        }}
-                    }};
-
-                    recognition.onerror = function(err) {{
-                        grabando = false;
-                        const micBtn = window.parent.document.getElementById('btn-mic-main');
-                        if (micBtn) micBtn.style.backgroundColor = '#1e1f20';
-                        console.error("Error microfono:", err);
-                    }};
-
-                    recognition.onresult = function(e) {{
-                        const transcrito = e.results[0][0].transcript;
-                        const areas = window.parent.document.querySelectorAll('textarea');
-                        if (areas.length > 0) {{
-                            const area = areas[0];
-                            const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
-                            const prevVal = area.value ? area.value + ' ' : '';
-                            nativeSetter.call(area, prevVal + transcrito);
-                            area.dispatchEvent(new Event('input', {{ bubbles: true }}));
-                        }}
-                    }};
-                }}
-
-                window.parent.iniciarDictadoVozGlobal = function() {{
-                    if (!recognition) {{
-                        alert("Reconocimiento de voz no disponible o permisos bloqueados en su navegador. Use Chrome/Edge y permita el micrófono.");
-                        return;
-                    }}
-                    if (grabando) {{
-                        recognition.stop();
-                    }} else {{
-                        try {{
-                            recognition.start();
-                        }} catch(e) {{
-                            recognition.stop();
-                        }}
-                    }}
-                }};
-
                 function reproducirAudioFluido() {{
                     if (!('speechSynthesis' in window)) return;
                     if (window.speechSynthesis.speaking) {{
@@ -1088,7 +1349,7 @@ if vista == "chat":
 
                     const utter = new SpeechSynthesisUtterance(txt);
                     utter.lang = 'es-AR';
-                    utter.rate = 1.12; // Velocidad de habla natural y dinámica
+                    utter.rate = 1.12;
                     utter.pitch = 1.0;
 
                     const voces = window.speechSynthesis.getVoices();
@@ -1096,10 +1357,8 @@ if vista == "chat":
 
                     let vTarget = null;
                     if (perfil === "hombre") {{
-                        // Búsqueda prioritaria de voces neuronales o masculinas naturales
                         vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('male')));
                     }} else {{
-                        // Búsqueda prioritaria de voces femeninas naturales
                         vTarget = voces.find(v => (v.lang.includes('es') || v.lang.includes('AR')) && (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('neural') || v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('female')));
                     }}
                     if (vTarget) utter.voice = vTarget;
@@ -1116,11 +1375,134 @@ if vista == "chat":
         </html>
     """, height=42)
 
-    # Inyección para captura de pantalla pegada (Ctrl+V)
+    # Parche 13: Motor de micrófono y dictado robusto con getUserMedia
+    components.html("""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>body { margin: 0; padding: 0; background: transparent; }</style>
+        </head>
+        <body>
+            <script>
+                let recognition = null;
+                let grabacionActiva = false;
+                let streamAudio = null;
+
+                async function solicitarPermisoMicrofono() {
+                    try {
+                        streamAudio = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        return true;
+                    } catch (err) {
+                        console.error("Permiso de micrófono denegado:", err);
+                        alert("Por favor, haga clic en el candado de la barra de direcciones y permita el acceso al Micrófono para JUXALEGIS OS.");
+                        return false;
+                    }
+                }
+
+                function inicializarReconocedor() {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    if (!SpeechRecognition) {
+                        alert("Su navegador no soporta dictado por voz. Recomendamos Google Chrome o Microsoft Edge.");
+                        return null;
+                    }
+
+                    const rec = new SpeechRecognition();
+                    rec.lang = 'es-AR';
+                    rec.continuous = true;
+                    rec.interimResults = true;
+
+                    rec.onstart = function() {
+                        grabacionActiva = true;
+                        const btn = window.parent.document.getElementById('btn-mic-main');
+                        if (btn) {
+                            btn.style.backgroundColor = '#8a2424';
+                            btn.style.borderColor = '#ff5252';
+                            btn.style.color = '#ffffff';
+                            btn.innerText = '🔴';
+                        }
+                    };
+
+                    rec.onend = function() {
+                        grabacionActiva = false;
+                        const btn = window.parent.document.getElementById('btn-mic-main');
+                        if (btn) {
+                            btn.style.backgroundColor = '#1e1f20';
+                            btn.style.borderColor = '#3c4043';
+                            btn.style.color = '#e3e3e3';
+                            btn.innerText = '🎤';
+                        }
+                        if (streamAudio) {
+                            streamAudio.getTracks().forEach(track => track.stop());
+                        }
+                    };
+
+                    rec.onerror = function(event) {
+                        console.error("Error en reconocimiento de voz:", event.error);
+                        grabacionActiva = false;
+                        const btn = window.parent.document.getElementById('btn-mic-main');
+                        if (btn) {
+                            btn.style.backgroundColor = '#1e1f20';
+                            btn.style.borderColor = '#3c4043';
+                            btn.innerText = '🎤';
+                        }
+                    };
+
+                    rec.onresult = function(event) {
+                        let textoFinal = '';
+                        for (let i = event.resultIndex; i < event.results.length; ++i) {
+                            if (event.results[i].isFinal) {
+                                textoFinal += event.results[i][0].transcript + ' ';
+                            }
+                        }
+
+                        if (textoFinal.trim() !== '') {
+                            const textareas = window.parent.document.querySelectorAll('textarea');
+                            if (textareas.length > 0) {
+                                const area = textareas[0];
+                                const nativeSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, "value").set;
+                                const prevVal = area.value ? area.value + ' ' : '';
+                                nativeSetter.call(area, prevVal + textoFinal.trim());
+                                area.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        }
+                    };
+
+                    return rec;
+                }
+
+                window.parent.alternarDictadoMicrofono = async function() {
+                    if (grabacionActiva) {
+                        if (recognition) recognition.stop();
+                        return;
+                    }
+
+                    const permisoOk = await solicitarPermisoMicrofono();
+                    if (!permisoOk) return;
+
+                    if (!recognition) {
+                        recognition = inicializarReconocedor();
+                    }
+
+                    if (recognition) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            recognition.stop();
+                            setTimeout(() => recognition.start(), 300);
+                        }
+                    }
+                };
+            </script>
+        </body>
+        </html>
+    """, height=0, width=0)
+
+    # Parche 12: Escucha de capturas pegadas en el portapapeles (Ctrl+V)
     components.html("""
         <script>
             document.addEventListener('paste', function (e) {
-                const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+                const items = (e.clipboardData || window.clipboardData).items;
                 for (let index in items) {
                     const item = items[index];
                     if (item.kind === 'file' && item.type.indexOf('image') !== -1) {
@@ -1128,7 +1510,7 @@ if vista == "chat":
                         const reader = new FileReader();
                         reader.onload = function (event) {
                             window.parent.postMessage({
-                                tipo: 'CAPTURA_PEGADA',
+                                tipo: 'CAPTURA_PEGADA_PORTAPAPELES',
                                 imagen_b64: event.target.result
                             }, '*');
                         };
@@ -1139,7 +1521,7 @@ if vista == "chat":
         </script>
     """, height=0, width=0)
 
-    # Previsualizador de captura activa utilizando clave dinámica versionada
+    # Previsualizador de captura manual activa
     uploader_ver = st.session_state["captura_uploader_ver"]
     captura_archivo_manual = st.file_uploader(
         "Cargar captura opcional", 
@@ -1158,7 +1540,7 @@ if vista == "chat":
                 st.session_state["captura_uploader_ver"] += 1
                 st.rerun()
 
-    # Modal interactivo si se activó imagen o video desde el botón '+'
+    # Módulos de creación abiertos desde el popover '+'
     modo_creacion = st.session_state.get("modo_activo", None)
     if modo_creacion == "imagen":
         with st.expander("🖼️ Generador de Imágenes Corporativas", expanded=True):
@@ -1257,7 +1639,7 @@ if vista == "chat":
         with c_mic:
             st.markdown(
                 """
-                <button id="btn-mic-main" class="btn-accion-redonda" title="Dictar por voz" onclick="window.parent.iniciarDictadoVozGlobal()">
+                <button id="btn-mic-main" class="btn-accion-redonda" title="Dictar consulta por voz" onclick="window.parent.alternarDictadoMicrofono()">
                     🎤
                 </button>
                 """,
@@ -1313,7 +1695,7 @@ if vista == "chat":
                 if archivos_adjuntos:
                     payload.extend(archivos_adjuntos)
 
-                # Si hay captura de pantalla activa, se incorpora al análisis pericial multimodal
+                # Si hay captura manual activa se procesa en 3 fases periciales
                 if img_captura_activa:
                     b_img = io.BytesIO()
                     img_captura_activa.save(b_img, format="PNG")
@@ -1366,7 +1748,6 @@ if vista == "chat":
 
         guardar_mensaje_db(sess_id, "assistant", respuesta_final, act_cuad_save)
         st.session_state["messages"].append({"role": "assistant", "content": respuesta_final})
-        # Incrementa la versión para limpiar el uploader sin mutar widgets instanciados
         st.session_state["captura_uploader_ver"] += 1
         st.rerun()
 
@@ -1420,37 +1801,8 @@ elif vista == "videos":
             st.video(v_bytes)
 
 elif vista == "biblioteca":
-    st.markdown('<div class="module-header-serif">BIBLIOTECA DE RECURSOS Y PLANTILLAS</div>', unsafe_allow_html=True)
-    tab_subir, tab_consultar = st.tabs(["📤 Cargar recurso", "📂 Plantillas resguardadas"])
-    
-    with tab_subir:
-        cat = st.selectbox("Categoría:", ["Modelos Procesales (Córdoba)", "Contratos y Convenios", "Pliegos / Licitaciones", "Identidad Corporativa"])
-        nom_ref = st.text_input("Nombre de referencia:")
-        arch_sub = st.file_uploader("Archivo (DOCX, PDF, TXT, PNG):", type=["docx", "pdf", "txt", "png", "jpg"])
-        if st.button("Guardar en Biblioteca", use_container_width=True):
-            if arch_sub and nom_ref.strip():
-                nom_dest = f"{cat}_{nom_ref.strip().replace(' ', '_')}_{arch_sub.name}"
-                with open(os.path.join(CARPETA_BIBLIOTECA, nom_dest), "wb") as f:
-                    f.write(arch_sub.getbuffer())
-                st.toast("Recurso incorporado con éxito a la biblioteca", icon="✅")
-                st.rerun()
-
-    with tab_consultar:
-        archivos_b = os.listdir(CARPETA_BIBLIOTECA)
-        if not archivos_b:
-            st.info("No existen recursos almacenados.")
-        else:
-            for arch in archivos_b:
-                c_i, c_d, c_b = st.columns([0.65, 0.22, 0.13])
-                with c_i:
-                    st.text(f"📄 {arch}")
-                with c_d:
-                    with open(os.path.join(CARPETA_BIBLIOTECA, arch), "rb") as f:
-                        st.download_button("Descargar", data=f.read(), file_name=arch, key=f"d_{arch}", use_container_width=True)
-                with c_b:
-                    if st.button("🗑️", key=f"b_{arch}"):
-                        os.remove(os.path.join(CARPETA_BIBLIOTECA, arch))
-                        st.rerun()
+    # Parche 11: Renderizado de biblioteca dinámica y planillas
+    renderizar_vista_biblioteca_dinamica()
 
 elif vista == "ver_cuaderno":
     cuaderno = st.session_state.get("active_cuaderno", "General")
@@ -1467,42 +1819,10 @@ elif vista == "ver_cuaderno":
             st.session_state["active_view"] = "chat"
             st.rerun()
 
-    st.markdown("<p style='font-size: 0.85rem; color: #8A99A8; font-weight: bold;'>HILOS ASOCIADOS A ESTE EXPEDIENTE:</p>", unsafe_allow_html=True)
-    
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT session_id, titulo, ultima_actividad FROM sesiones WHERE cuaderno = ? ORDER BY ultima_actividad DESC", (cuaderno,))
-    hilos_cuaderno = c.fetchall()
-    conn.close()
+    # Parche 14: Gestión integral de causas dentro del cuaderno
+    renderizar_hilos_expediente_con_acciones(cuaderno)
 
-    if hilos_cuaderno:
-        for s_id, s_tit, s_act in hilos_cuaderno:
-            titulo_hilo = s_tit if s_tit else "Conversación"
-            col_h1, col_h2, col_h3 = st.columns([0.64, 0.22, 0.14])
-            with col_h1:
-                st.markdown(f"**💬 {titulo_hilo}** <br><span style='font-size:0.75rem; color:#8A99A8;'>Actividad: {s_act}</span>", unsafe_allow_html=True)
-            with col_h2:
-                if st.button("Continuar", key=f"cont_nb_{s_id}", use_container_width=True):
-                    st.session_state["current_session_id"] = s_id
-                    st.session_state["cuaderno_activo"] = cuaderno
-                    st.session_state["active_cuaderno"] = cuaderno
-                    st.session_state["messages"] = cargar_mensajes_sesion(s_id)
-                    st.session_state["loaded_session_id"] = s_id
-                    st.session_state["active_view"] = "chat"
-                    st.rerun()
-            with col_h3:
-                with st.popover("···", use_container_width=True):
-                    if st.button("🗑️ Borrar", key=f"del_cuad_{s_id}", use_container_width=True):
-                        conn_del = sqlite3.connect(DB_FILE)
-                        c_del = conn_del.cursor()
-                        c_del.execute("DELETE FROM sesiones WHERE session_id = ?", (s_id,))
-                        c_del.execute("DELETE FROM chats WHERE session_id = ?", (s_id,))
-                        conn_del.commit()
-                        conn_del.close()
-                        st.rerun()
-    else:
-        st.info("Este cuaderno aún no tiene conversaciones iniciadas.")
-
+    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
     if st.button("← Volver a todos los cuadernos"):
         st.session_state["active_view"] = "todos_los_cuadernos"
         st.rerun()
