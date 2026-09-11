@@ -1,17 +1,17 @@
 # ------------------------------------------------------------------------------
 # JUXALEGIS OS - APP WEB COMPLETA (UNIFICADA CON BASE DE DATOS LOCAL, RUTAS Y VOZ)
+# INTEGRACIÓN: GOOGLE GEMINI 2.5 + GOOGLE SEARCH GROUNDING + FILES API NATIVA
 # ------------------------------------------------------------------------------
 
 import streamlit as st
 import os
 import sqlite3
+import tempfile
 from datetime import datetime
 import streamlit.components.v1 as components
 
-try:
-    import anthropic
-except ImportError:
-    anthropic = None
+from google import genai
+from google.genai import types
 
 # ----------------- CONFIGURACIÓN BÁSICA & FAVICON CORPORATIVO -----------------
 page_icon_target = "logo_2.png" if os.path.exists("logo_2.png") else ("logo.png" if os.path.exists("logo.png") else "⚖️")
@@ -542,21 +542,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ----------------- GESTIÓN SEGURA DE API KEY ANTHROPIC -----------------
-def obtener_claude_api_key():
+# ----------------- GESTIÓN SEGURA DE API KEY GOOGLE GEMINI -----------------
+def obtener_gemini_api_key():
     try:
-        if "ANTHROPIC_API_KEY" in st.secrets:
-            val = st.secrets["ANTHROPIC_API_KEY"]
+        if "GEMINI_API_KEY" in st.secrets:
+            val = st.secrets["GEMINI_API_KEY"]
             if val:
                 return "".join(str(val).split()).strip('"').strip("'")
     except Exception:
         pass
-    env_key = os.getenv("ANTHROPIC_API_KEY")
+    env_key = os.getenv("GEMINI_API_KEY")
     if env_key:
         return "".join(str(env_key).split()).strip('"').strip("'")
     return None
 
-CLAUDE_API_KEY = obtener_claude_api_key()
+GEMINI_API_KEY = obtener_gemini_api_key()
 
 CORREOS_AUTORIZADOS = [
     "gail@juxalegis.com",
@@ -603,6 +603,23 @@ PROMPTS_POR_PERFIL = {
     )
 }
 
+# ----------------- GESTIÓN DE ARCHIVOS PESADOS (FILES API) -----------------
+def procesar_documento_pesado(client: genai.Client, archivo_subido):
+    with tempfile.NamedTemporaryFile(delete=False, suffix=f"_{archivo_subido.name}") as tmp_file:
+        tmp_file.write(archivo_subido.getvalue())
+        ruta_temporal = tmp_file.name
+
+    try:
+        documento_en_nube = client.files.upload(
+            file=ruta_temporal,
+            config=types.UploadFileConfig(display_name=archivo_subido.name)
+        )
+    finally:
+        if os.path.exists(ruta_temporal):
+            os.remove(ruta_temporal)
+    
+    return documento_en_nube
+
 # ----------------- ESTADOS EN SESSION STATE -----------------
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
@@ -631,8 +648,11 @@ if "active_cuaderno" not in st.session_state:
 if "fuentes_cuadernos" not in st.session_state:
     st.session_state.fuentes_cuadernos = {"General": []}
 
-if "selected_model" not in st.session_state:
-    st.session_state.selected_model = "Claude 3.5 Sonnet"
+if "archivos_gemini_obj" not in st.session_state:
+    st.session_state.archivos_gemini_obj = {"General": []}
+
+if "modelo_ia_seleccionado" not in st.session_state:
+    st.session_state.modelo_ia_seleccionado = "Flash"
 
 if "audio_text_to_speak" not in st.session_state:
     st.session_state.audio_text_to_speak = ""
@@ -738,6 +758,8 @@ with st.sidebar:
                 conn.close()
                 if n_cuad not in st.session_state.fuentes_cuadernos:
                     st.session_state.fuentes_cuadernos[n_cuad] = []
+                if n_cuad not in st.session_state.archivos_gemini_obj:
+                    st.session_state.archivos_gemini_obj[n_cuad] = []
                 st.session_state["active_cuaderno"] = n_cuad
                 st.session_state["cuaderno_activo"] = n_cuad
                 st.session_state["current_session_id"] = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -926,15 +948,32 @@ if vista == "chat":
 
     has_messages = len(st.session_state.get("messages", [])) > 0
 
-    with st.expander("📁 Agregar fuentes y documentos al cuaderno actual"):
-        archivo_subido = st.file_uploader("Subir archivos (PDF, TXT, Imágenes, Audio):", type=["png", "jpg", "jpeg", "pdf", "txt", "wav", "mp3"])
+    with st.expander("📁 Agregar fuentes, libros y expedientes al cuaderno actual"):
+        archivo_subido = st.file_uploader(
+            "Cargar documentos (PDF extensos, Tratados, Causa completa, TXT):", 
+            type=["png", "jpg", "jpeg", "pdf", "txt", "wav", "mp3"]
+        )
         if archivo_subido:
             nombre_archivo = archivo_subido.name
             if act_cuad not in st.session_state.fuentes_cuadernos:
                 st.session_state.fuentes_cuadernos[act_cuad] = []
+            if act_cuad not in st.session_state.archivos_gemini_obj:
+                st.session_state.archivos_gemini_obj[act_cuad] = []
+                
             if nombre_archivo not in st.session_state.fuentes_cuadernos[act_cuad]:
-                st.session_state.fuentes_cuadernos[act_cuad].append(nombre_archivo)
-                st.success(f"Archivo '{nombre_archivo}' vinculado al cuaderno '{act_cuad}'.")
+                if GEMINI_API_KEY:
+                    try:
+                        with st.spinner(f"Subiendo '{nombre_archivo}' a la memoria de trabajo de Google..."):
+                            client_upload = genai.Client(api_key=GEMINI_API_KEY)
+                            doc_en_nube = procesar_documento_pesado(client_upload, archivo_subido)
+                            st.session_state.archivos_gemini_obj[act_cuad].append(doc_en_nube)
+                            st.session_state.fuentes_cuadernos[act_cuad].append(nombre_archivo)
+                            st.success(f"Documento '{nombre_archivo}' indexado con éxito en la memoria.")
+                    except Exception as e_up:
+                        st.error(f"Error procesando documento: {str(e_up)}")
+                else:
+                    st.session_state.fuentes_cuadernos[act_cuad].append(nombre_archivo)
+                    st.warning("Archivo registrado como referencia de texto (clave API ausente).")
 
         fuentes_actuales = st.session_state.fuentes_cuadernos.get(act_cuad, [])
         st.write(f"**Fuentes activas en este cuaderno:** {', '.join(fuentes_actuales) if fuentes_actuales else 'Ninguna'}")
@@ -1057,17 +1096,14 @@ if vista == "chat":
         components.html(voice_html, height=45)
 
     with col_selector:
-        modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Haiku")
+        modelo_actual = st.session_state.get("modelo_ia_seleccionado", "Flash")
         with st.popover(f"{modelo_actual} ▾", use_container_width=True):
-            st.caption("Nivel Inteligencia")
-            if st.button("⚡ Haiku", use_container_width=True):
-                st.session_state["modelo_ia_seleccionado"] = "Haiku"
+            st.caption("Motor Neuronal")
+            if st.button("⚡ Flash (Ultra Rápido)", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Flash"
                 st.rerun()
-            if st.button("🧠 Sonnet", use_container_width=True):
-                st.session_state["modelo_ia_seleccionado"] = "Sonnet"
-                st.rerun()
-            if st.button("🏛️ Opus", use_container_width=True):
-                st.session_state["modelo_ia_seleccionado"] = "Opus"
+            if st.button("🧠 Pro (Análisis Complejo)", use_container_width=True):
+                st.session_state["modelo_ia_seleccionado"] = "Pro"
                 st.rerun()
 
     user_prompt = st.session_state.pop("pending_message", "")
@@ -1098,104 +1134,50 @@ if vista == "chat":
 
             respuesta_completa = ""
 
-            if anthropic and CLAUDE_API_KEY and not CLAUDE_API_KEY.startswith("TU_CLAVE"):
-                client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
-                fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
-                system_prompt = (
-                    f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
-                    f"Estás operando en el cuaderno web '{act_cuad_save}' "
-                    f"con las fuentes: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
-                )
-
-                # Detección dinámica de los modelos activos en la cuenta
-                modelos_autorizados = []
+            if GEMINI_API_KEY:
                 try:
-                    if hasattr(client, 'models') and hasattr(client.models, 'list'):
-                        m_list = client.models.list(limit=50)
-                        for m in m_list.data:
-                            if hasattr(m, 'id') and m.id not in modelos_autorizados:
-                                modelos_autorizados.append(m.id)
-                except Exception:
-                    pass
+                    client = genai.Client(api_key=GEMINI_API_KEY)
+                    fuentes_list = st.session_state.fuentes_cuadernos.get(act_cuad_save, [])
+                    system_prompt = (
+                        f"{PROMPTS_POR_PERFIL[perfil_seleccionado]}\n\n"
+                        f"Estás operando en el cuaderno web '{act_cuad_save}' "
+                        f"con las fuentes documentales: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
+                    )
 
-                # Cascada integral con soporte universal para Sonnet 3.5 y 3
-                lista_universal = [
-                    "claude-3-5-sonnet-20240620",
-                    "claude-3-5-sonnet-20241022",
-                    "claude-3-5-sonnet-latest",
-                    "claude-3-7-sonnet-20250219",
-                    "claude-3-sonnet-20240229",
-                    "claude-3-opus-20240229",
-                    "claude-3-opus-latest",
-                    "claude-3-haiku-20240307",
-                    "claude-3-5-haiku-20241022",
-                    "claude-3-5-haiku-latest",
-                    "claude-2.1",
-                    "claude-instant-1.2"
-                ]
+                    # Selección dinámica de modelo oficial de Google Gemini
+                    engine_target = "gemini-2.5-flash" if st.session_state.get("modelo_ia_seleccionado") == "Flash" else "gemini-2.5-pro"
 
-                candidatos = []
-                for m in modelos_autorizados:
-                    if m not in candidatos:
-                        candidatos.append(m)
-                for m in lista_universal:
-                    if m not in candidatos:
-                        candidatos.append(m)
+                    configuracion_con_web = types.GenerateContentConfig(
+                        system_instruction=system_prompt,
+                        # Activa búsqueda web nativa en Google en tiempo real
+                        tools=[types.Tool(google_search=types.GoogleSearch())],
+                        temperature=0.3,
+                    )
 
-                exito = False
-                ultimo_err = None
+                    # Armado del payload: libros/expedientes cargados en memoria + mensaje
+                    archivos_adjuntos = st.session_state.archivos_gemini_obj.get(act_cuad_save, [])
+                    if archivos_adjuntos:
+                        payload = list(archivos_adjuntos) + [prompt]
+                    else:
+                        payload = prompt
 
-                for mod in candidatos:
-                    try:
-                        # Intento con streaming nativo
-                        respuesta_completa = ""
-                        if hasattr(client.messages, 'stream'):
-                            with client.messages.stream(
-                                model=mod,
-                                max_tokens=1500,
-                                system=system_prompt,
-                                messages=[{"role": "user", "content": prompt}],
-                            ) as stream:
-                                for text_chunk in stream.text_stream:
-                                    respuesta_completa += text_chunk
-                                    contenedor_respuesta.markdown(respuesta_completa + "▌")
-                        else:
-                            stream = client.messages.create(
-                                model=mod,
-                                max_tokens=1500,
-                                system=system_prompt,
-                                messages=[{"role": "user", "content": prompt}],
-                                stream=True
-                            )
-                            for event in stream:
-                                if hasattr(event, 'type') and event.type == 'content_block_delta':
-                                    if hasattr(event.delta, 'text'):
-                                        respuesta_completa += event.delta.text
-                                        contenedor_respuesta.markdown(respuesta_completa + "▌")
+                    response_stream = client.models.generate_content_stream(
+                        model=engine_target,
+                        contents=payload,
+                        config=configuracion_con_web,
+                    )
 
-                        # Resguardo directo sin streaming si no emitió texto
-                        if not respuesta_completa:
-                            resp_directa = client.messages.create(
-                                model=mod,
-                                max_tokens=1500,
-                                system=system_prompt,
-                                messages=[{"role": "user", "content": prompt}]
-                            )
-                            if resp_directa.content and len(resp_directa.content) > 0:
-                                respuesta_completa = resp_directa.content[0].text
+                    for chunk in response_stream:
+                        if chunk.text:
+                            respuesta_completa += chunk.text
+                            contenedor_respuesta.markdown(respuesta_completa + "▌")
 
-                        contenedor_respuesta.markdown(respuesta_completa)
-                        exito = True
-                        break
-                    except Exception as e_mod:
-                        ultimo_err = e_mod
-                        continue
-
-                if not exito:
-                    respuesta_completa = f"⚠️ Detalle de infraestructura: No fue posible establecer enlace ({str(ultimo_err)}). Verifique los permisos de su organización en Anthropic."
+                    contenedor_respuesta.markdown(respuesta_completa)
+                except Exception as e_mod:
+                    respuesta_completa = f"⚠️ Detalle de enlace con Gemini: {str(e_mod)}"
                     contenedor_respuesta.markdown(respuesta_completa)
             else:
-                respuesta_completa = "⚠️ La clave de API de Anthropic no se encuentra configurada en los Secrets."
+                respuesta_completa = "⚠️ La clave de API (GEMINI_API_KEY) no se encuentra configurada en los Secrets."
                 contenedor_respuesta.markdown(respuesta_completa)
 
             guardar_mensaje_db(sess_id, "assistant", respuesta_completa, act_cuad_save)
@@ -1243,7 +1225,7 @@ elif vista == "ver_cuaderno":
     
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute("SELECT session_id, titulo, ultima_actividad FROM sesiones WHERE cuaderno = ? ORDER BY ultima_actividad DESC", (cuaderno,))
+    c.execute("SELECT session_id, titulo, ultima_actividad FROM sesiones WHERE cuaderno = ? ORDER BY融 ultima_actividad DESC", (cuaderno,))
     hilos_cuaderno = c.fetchall()
     conn.close()
 
@@ -1319,6 +1301,8 @@ elif vista == "todos_los_cuadernos":
                     conn.close()
                     if n_guardar not in st.session_state.fuentes_cuadernos:
                         st.session_state.fuentes_cuadernos[n_guardar] = []
+                    if n_guardar not in st.session_state.archivos_gemini_obj:
+                        st.session_state.archivos_gemini_obj[n_guardar] = []
                     st.session_state["active_cuaderno"] = n_guardar
                     st.session_state["cuaderno_activo"] = n_guardar
                     st.session_state["current_session_id"] = f"chat_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
