@@ -622,7 +622,7 @@ def generar_video_institucional(client, prompt_guion):
         st.error(f"Inconveniente en generación audiovisual: {error}")
         return None
 
-# ----------------- PARCHE: PROTOCOLO, GÉNERO Y PERSONALIDAD ASISTENCIAL -----------------
+# ----------------- PROTOCOLO, GÉNERO Y PERSONALIDAD ASISTENCIAL -----------------
 def obtener_tratamiento_usuario(email_usuario: str) -> dict:
     mail = email_usuario.lower().strip()
     if "martin" in mail:
@@ -714,9 +714,9 @@ Queda terminantemente prohibido recitar o auto-presentar lo que sabes hacer (ej:
         f"con las siguientes fuentes documentales activas: {', '.join(fuentes_list) if fuentes_list else 'Ninguna'}."
     )
 
-# ----------------- PARCHE: BURBUJA DE USUARIO CON ACCIONES GARANTIZADAS -----------------
-def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
-    clave_edicion = f"editando_msg_{idx_m}"
+# ----------------- BURBUJA DE USUARIO CON ACCIONES GARANTIZADAS -----------------
+def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name, session_id_actual):
+    clave_edicion = f"editando_{session_id_actual}_{idx_m}"
     if clave_edicion not in st.session_state:
         st.session_state[clave_edicion] = False
 
@@ -725,21 +725,25 @@ def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
 
         with col_msg_menu:
             with st.popover("⌵", help="Opciones de la consulta"):
-                if st.button("✏️ Editar", key=f"btn_edit_user_{idx_m}", use_container_width=True):
+                if st.button("✏️ Editar", key=f"btn_edit_{session_id_actual}_{idx_m}", use_container_width=True):
                     st.session_state[clave_edicion] = True
                     st.rerun()
 
-                if st.button("📋 Copiar", key=f"btn_copy_user_{idx_m}", use_container_width=True):
+                if st.button("📋 Copiar", key=f"btn_cp_{session_id_actual}_{idx_m}", use_container_width=True):
                     txt_escapado = (
                         msg_content.replace("\\", "\\\\")
                         .replace("`", "\\`")
                         .replace("$", "\\$")
+                        .replace('"', '\\"')
                         .replace("\n", "\\n")
+                        .replace("\r", "")
                     )
                     components.html(
                         f"""
                         <script>
-                            navigator.clipboard.writeText(`{txt_escapado}`);
+                            navigator.clipboard.writeText("{txt_escapado}").then(() => {{
+                                window.parent.postMessage({{ tipo: 'COPIADO_OK' }}, '*');
+                            }});
                         </script>
                         """,
                         height=0,
@@ -752,32 +756,32 @@ def renderizar_burbuja_usuario_con_acciones(idx_m, msg_content, user_name):
                 nuevo_texto_editado = st.text_area(
                     "Modificar y reenviar consulta:",
                     value=msg_content,
-                    key=f"ta_edit_box_{idx_m}",
+                    key=f"ta_edit_box_{session_id_actual}_{idx_m}",
                     height=110
                 )
                 col_g, col_c = st.columns([0.28, 0.72])
                 with col_g:
-                    if st.button("Reenviar", key=f"btn_submit_edit_{idx_m}"):
+                    if st.button("Reenviar", key=f"btn_sub_{session_id_actual}_{idx_m}"):
                         if nuevo_texto_editado.strip():
                             st.session_state[clave_edicion] = False
                             st.session_state["mensaje_a_procesar"] = nuevo_texto_editado.strip()
                             st.rerun()
                 with col_c:
-                    if st.button("Cancelar", key=f"btn_cancel_edit_{idx_m}"):
+                    if st.button("Cancelar", key=f"btn_canc_{session_id_actual}_{idx_m}"):
                         st.session_state[clave_edicion] = False
                         st.rerun()
             else:
                 st.markdown(
                     f"""
-                    <div style="line-height: 1.5;">
+                    <div style="line-height: 1.5; margin-bottom: 2px;">
                         <span style="color: #DCA48A; font-weight: 800; letter-spacing: 0.5px; font-size: 0.95rem;">{user_name}:</span>
-                        <div style="color: #FFF9E6; margin-top: 4px; white-space: pre-wrap;">{msg_content}</div>
+                        <div style="color: #FFF9E6; margin-top: 5px; font-size: 0.95rem; white-space: pre-wrap; word-break: break-word;">{msg_content}</div>
                     </div>
                     """,
                     unsafe_allow_html=True
                 )
 
-# ----------------- PARCHE: PEGADO DIRECTO DE IMÁGENES (CTRL + V) -----------------
+# ----------------- PEGADO DIRECTO DE IMÁGENES (CTRL + V) -----------------
 def inyectar_receptor_clipboard_global():
     components.html("""
         <script>
@@ -837,17 +841,20 @@ def extraer_parte_imagen_para_gemini():
         return parte_multimodal
     return None
 
-# ----------------- PARCHE: SÍNTESIS DE VOZ NATURAL (TTS) -----------------
+# ----------------- SÍNTESIS DE VOZ NATURAL (TTS DINÁMICO Y FLUIDO) -----------------
 def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_activa):
     if not ultimo_texto_asistente or not ultimo_texto_asistente.strip():
         return
 
-    texto_depurado = re.sub(r'[\*\_#`\[\]\(\)>~]', ' ', ultimo_texto_asistente)
-    texto_depurado = re.sub(r'https?://\S+', ' ', texto_depurado)
-    texto_depurado = re.sub(r'\s+', ' ', texto_depurado).strip()
+    # Limpieza profunda: se eliminan pausas muertas, asteriscos, guiones largos y saltos
+    t_limpio = re.sub(r'[\*\_#`\[\]\(\)>~]', ' ', ultimo_texto_asistente)
+    t_limpio = re.sub(r'https?://\S+', ' ', t_limpio)
+    t_limpio = re.sub(r'[—–-]', ' ', t_limpio)
+    t_limpio = re.sub(r'\.{2,}', '.', t_limpio)
+    t_limpio = re.sub(r'\s+', ' ', t_limpio).strip()
 
-    texto_js_seguro = (
-        texto_depurado
+    t_js_seguro = (
+        t_limpio
         .replace('\\', '\\\\')
         .replace('"', '\\"')
         .replace("'", "\\'")
@@ -899,14 +906,14 @@ def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_acti
             </style>
         </head>
         <body>
-            <button class="btn-audio-dock" id="btn-reproducir-tts" title="Escuchar respuesta profesional" onclick="gestionarReproduccionVocal()">
+            <button class="btn-audio-dock" id="btn-reproducir-tts" title="Escuchar locución fluida" onclick="gestionarReproduccionVocal()">
                 🔊
             </button>
             <span id="label-estado-tts" class="estado-reproduccion"></span>
 
             <script>
                 let synth = window.speechSynthesis;
-                let textoCompleto = "{texto_js_seguro}";
+                let textoCompleto = "{t_js_seguro}";
                 let perfilObjetivo = "{perfil_voz_activa}";
                 let listaVoces = [];
 
@@ -926,68 +933,38 @@ def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_acti
                     }}
 
                     let vocesEspanol = listaVoces.filter(v => v.lang.toLowerCase().startsWith('es'));
-                    if (vocesEspanol.length === 0) {{
-                        return listaVoces[0] || null;
-                    }}
+                    if (vocesEspanol.length === 0) return listaVoces[0] || null;
 
                     let seleccion = null;
                     if (perfil === "mujer") {{
                         seleccion = vocesEspanol.find(v => 
-                            (v.name.toLowerCase().includes('elena') || 
-                             v.name.toLowerCase().includes('estela') ||
-                             v.name.toLowerCase().includes('sabina') || 
-                             v.name.toLowerCase().includes('paulina') || 
-                             v.name.toLowerCase().includes('monica') ||
-                             v.name.toLowerCase().includes('jimena') ||
-                             v.name.toLowerCase().includes('dalia') ||
-                             v.name.toLowerCase().includes('female') ||
-                             v.name.toLowerCase().includes('mujer')) &&
-                            (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online') || v.name.toLowerCase().includes('google'))
+                            (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online') || v.name.toLowerCase().includes('google')) &&
+                            (v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('sabina') || v.name.toLowerCase().includes('paulina') || v.name.toLowerCase().includes('monica') || v.name.toLowerCase().includes('female'))
                         );
-
                         if (!seleccion) {{
                             seleccion = vocesEspanol.find(v => 
-                                v.name.toLowerCase().includes('elena') || 
-                                v.name.toLowerCase().includes('sabina') || 
-                                v.name.toLowerCase().includes('paulina') || 
-                                v.name.toLowerCase().includes('monica') ||
-                                v.name.toLowerCase().includes('female') ||
-                                v.name.toLowerCase().includes('zira')
+                                v.name.toLowerCase().includes('elena') || v.name.toLowerCase().includes('sabina') || v.name.toLowerCase().includes('paulina') || v.name.toLowerCase().includes('female')
                             );
                         }}
-
                         if (!seleccion) {{
                             seleccion = vocesEspanol.find(v => v.name.toLowerCase().includes('google español') || v.lang.includes('AR'));
                         }}
                     }} else {{
                         seleccion = vocesEspanol.find(v => 
-                            (v.name.toLowerCase().includes('tomas') || 
-                             v.name.toLowerCase().includes('jorge') || 
-                             v.name.toLowerCase().includes('diego') ||
-                             v.name.toLowerCase().includes('alvaro') ||
-                             v.name.toLowerCase().includes('male') ||
-                             v.name.toLowerCase().includes('hombre')) &&
-                            (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online'))
+                            (v.name.toLowerCase().includes('natural') || v.name.toLowerCase().includes('online')) &&
+                            (v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('jorge') || v.name.toLowerCase().includes('male'))
                         );
-
                         if (!seleccion) {{
                             seleccion = vocesEspanol.find(v => 
-                                v.name.toLowerCase().includes('tomas') || 
-                                v.name.toLowerCase().includes('diego') ||
-                                v.name.toLowerCase().includes('male') ||
-                                v.name.toLowerCase().includes('david')
+                                v.name.toLowerCase().includes('tomas') || v.name.toLowerCase().includes('diego') || v.name.toLowerCase().includes('male')
                             );
                         }}
                     }}
-
                     return seleccion || vocesEspanol[0];
                 }}
 
                 function gestionarReproduccionVocal() {{
-                    if (!('speechSynthesis' in window)) {{
-                        alert("Su navegador no soporta síntesis vocal web.");
-                        return;
-                    }}
+                    if (!('speechSynthesis' in window)) return;
 
                     let btn = document.getElementById('btn-reproducir-tts');
                     let lbl = document.getElementById('label-estado-tts');
@@ -1013,12 +990,13 @@ def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_acti
                         locucion.lang = 'es-AR';
                     }}
 
-                    locucion.rate = 1.06;
-                    locucion.pitch = perfilObjetivo === "mujer" ? 1.02 : 0.98;
+                    // Cadencia ágil: ritmo dinámico y sin arrastre
+                    locucion.rate = 1.25;
+                    locucion.pitch = perfilObjetivo === "mujer" ? 1.05 : 1.02;
 
                     locucion.onstart = function() {{
                         btn.innerText = '⏹️';
-                        lbl.innerText = 'Reproduciendo...';
+                        lbl.innerText = 'Hablando...';
                     }};
 
                     locucion.onend = function() {{
@@ -1027,7 +1005,7 @@ def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_acti
                     }};
 
                     locucion.onerror = function(err) {{
-                        console.error("Error en reproducción TTS:", err);
+                        console.error("Error TTS:", err);
                         btn.innerText = '🔊';
                         lbl.innerText = '';
                     }};
@@ -1039,7 +1017,7 @@ def renderizar_reproductor_vocal_natural(ultimo_texto_asistente, perfil_voz_acti
         </html>
     """, height=42)
 
-# ----------------- PARCHE: CONTROLADOR NATIVO DE MICRÓFONO ROBUSTO -----------------
+# ----------------- CONTROLADOR NATIVO DE MICRÓFONO ROBUSTO -----------------
 def renderizar_motor_microfono_directo():
     html_mic_motor = """
     <!DOCTYPE html>
@@ -1088,7 +1066,7 @@ def renderizar_motor_microfono_directo():
             @keyframes pulso-mic {
                 0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
                 70% { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(255, 82, 82, 0); }
-                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+                100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
             }
         </style>
     </head>
@@ -1777,12 +1755,12 @@ if vista == "chat":
     act_cuad = st.session_state.get("cuaderno_activo", "General")
     sess_id = st.session_state.get("current_session_id", "")
 
-    # 1. Cargar historial desde SQLite SÓLO si cambió de sesión
+    # Cargar historial desde SQLite únicamente si cambió de sesión
     if sess_id and st.session_state.get("loaded_session_id") != sess_id:
         st.session_state["messages"] = cargar_mensajes_sesion(sess_id)
         st.session_state["loaded_session_id"] = sess_id
 
-    # 2. Si el usuario envió un mensaje, se guarda inmediatamente y se inyecta en messages
+    # Si hay un nuevo mensaje pendiente de procesar, persistirlo e insertarlo en memoria viva
     if st.session_state.get("mensaje_a_procesar"):
         prompt_usuario_actual = st.session_state["mensaje_a_procesar"]
         crear_o_actualizar_sesion_db(sess_id, prompt_usuario_actual, act_cuad)
@@ -1822,13 +1800,18 @@ if vista == "chat":
 
     chat_container = st.container()
 
+    # DIBUJADO COMPLETO Y PERMANENTE DEL HISTORIAL
     with chat_container:
-        if not has_messages:
+        if not st.session_state.get("messages") and sess_id:
+            st.session_state["messages"] = cargar_mensajes_sesion(sess_id)
+            st.session_state["loaded_session_id"] = sess_id
+
+        if len(st.session_state.get("messages", [])) == 0 and not st.session_state.get("mensaje_a_procesar"):
             renderizar_bienvenida_calibrada(user_name, alias_display, act_cuad, st.session_state.perfil_voz)
         else:
             for idx_m, msg in enumerate(st.session_state.get("messages", [])):
                 if msg["role"] == "user":
-                    renderizar_burbuja_usuario_con_acciones(idx_m, msg["content"], user_name)
+                    renderizar_burbuja_usuario_con_acciones(idx_m, msg["content"], user_name, sess_id)
                 else:
                     with st.chat_message("assistant", avatar=None):
                         st.markdown(f"<span style='color: #89CFF0; font-weight: 800;'>{alias_display.upper()}:</span><br>{msg['content']}", unsafe_allow_html=True)
@@ -1914,7 +1897,7 @@ if vista == "chat":
         st.session_state["captura_uploader_ver"] += 1
         st.rerun()
 
-    # Componente de síntesis TTS natural
+    # Síntesis TTS dinámica y fluida
     ultimo_texto_asistente = ""
     for m in reversed(st.session_state.get("messages", [])):
         if m["role"] == "assistant":
